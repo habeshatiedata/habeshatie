@@ -3,16 +3,20 @@ const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
 
+const authRoutes = require('./routes/authRoutes');
+const businessRoutes = require('./routes/businessRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure uploads folder exists
+// Ensure uploads directory exists
 const uploadDir = path.join(__dirname, 'public/uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// View Engine Setup
+// View Engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -29,12 +33,17 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
 }));
 
-// Global auth variables for EJS templates
+// Global variables for templates
 app.use((req, res, next) => {
   res.locals.user = req.session.userId || null;
   res.locals.userEmail = req.session.userEmail || null;
   next();
 });
+
+// Route Handlers
+app.use('/', authRoutes);
+app.use('/', businessRoutes);
+app.use('/', dashboardRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
