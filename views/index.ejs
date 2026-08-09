@@ -1,0 +1,49 @@
+<%- include('partials/header') %>
+
+<main class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
+  <section style="text-align: center; margin-bottom: 3rem;">
+    <h1 style="font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: 0.75rem;">
+      Find & Support Habesha Businesses
+    </h1>
+    <p style="color: #64748b; font-size: 1.1rem; max-width: 600px; margin: 0 auto 1.5rem auto;">
+      Connect directly with verified Ethiopian and Eritrean entrepreneurs near you.
+    </p>
+
+    <!-- Search Bar -->
+    <form action="/" method="GET" style="display: flex; gap: 0.5rem; max-width: 600px; margin: 0 auto;">
+      <input 
+        type="text" 
+        name="search" 
+        value="<%= search || '' %>" 
+        placeholder="Search restaurant, catering, legal, hair salon..." 
+        style="flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem;"
+      />
+      <button type="submit" class="btn-cta" style="border: none; cursor: pointer;">Search</button>
+    </form>
+  </section>
+
+  <!-- Business Cards Grid -->
+  <section>
+    <% if (businesses.length === 0) { %>
+      <div style="text-align: center; padding: 3rem; background: #fff; border-radius: 12px; border: 1px solid var(--border);">
+        <p style="color: #64748b;">No businesses found matching your request.</p>
+      </div>
+    <% } else { %>
+      <div class="grid">
+        <% businesses.forEach(b => { %>
+          <div class="card">
+            <img src="<%= b.photo %>" alt="<%= b.name %>" class="card-img" />
+            <div class="card-body">
+              <span class="badge"><%= b.category %></span>
+              <h3 style="margin-bottom: 0.5rem;"><a href="/b/<%= b.slug %>" style="color: var(--primary); text-decoration: none;"><%= b.name %></a></h3>
+              <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.75rem;">📍 <%= b.city %>, <%= b.country %></p>
+              <a href="/b/<%= b.slug %>" class="btn-whatsapp">View Profile & Contact</a>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+</main>
+
+<%- include('partials/footer') %>

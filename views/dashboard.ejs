@@ -1,0 +1,36 @@
+<%- include('partials/header') %>
+<main class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2>Owner Dashboard</h2>
+    <a href="/dashboard/create" class="btn-cta" style="text-decoration: none;">+ Add New Business</a>
+  </div>
+
+  <% if (businesses.length === 0) { %>
+    <div style="background: #fff; border: 1px solid var(--border); padding: 3rem; text-align: center; border-radius: 12px;">
+      <p style="color: #64748b;">You haven't added any businesses yet.</p>
+    </div>
+  <% } else { %>
+    <div class="grid">
+      <% businesses.forEach(b => { %>
+        <div class="card">
+          <div class="card-body">
+            <h3><%= b.name %></h3>
+            <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.25rem;">📍 <%= b.city %>, <%= b.country %></p>
+            <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border);" />
+            <div style="display: flex; justify-content: space-around; text-align: center;">
+              <div>
+                <strong style="font-size: 1.25rem; color: var(--primary);"><%= b.views_count %></strong>
+                <p style="font-size: 0.75rem; color: #64748b;">Views</p>
+              </div>
+              <div>
+                <strong style="font-size: 1.25rem; color: var(--whatsapp);"><%= b.whatsapp_clicks %></strong>
+                <p style="font-size: 0.75rem; color: #64748b;">WhatsApp Leads</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

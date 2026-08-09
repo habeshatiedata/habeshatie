@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Habeshatie | Trusted Habesha Business Directory</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container nav-flex">
+      <a href="/" class="brand-logo">Habeshatie<span>.</span></a>
+      <nav class="nav-links">
+        <a href="/">Explore</a>
+        <% if (user) { %>
+          <a href="/dashboard">Dashboard</a>
+          <a href="/logout">Logout</a>
+        <% } else { %>
+          <a href="/login">Login</a>
+          <a href="/register" class="btn-cta">List Your Business</a>
+        <% } %>
+      </nav>
+    </div>
+  </header>

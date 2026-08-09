@@ -1,0 +1,29 @@
+<%- include('partials/header') %>
+
+<main class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
+  <div style="background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; padding: 2rem;">
+    <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+      <img src="<%= business.photo %>" alt="<%= business.name %>" style="width: 100%; max-width: 400px; height: 280px; object-fit: cover; border-radius: 8px;" />
+      <div style="flex: 1; min-width: 280px;">
+        <span class="badge"><%= business.category %></span>
+        <h1 style="font-size: 2rem; margin-bottom: 0.5rem;"><%= business.name %></h1>
+        <p style="color: #64748b; margin-bottom: 1rem;">📍 <%= business.city %>, <%= business.country %></p>
+        <% if (business.languages) { %>
+          <p style="margin-bottom: 1rem; font-size: 0.9rem;"><strong>Languages:</strong> <%= business.languages %></p>
+        <% } %>
+        <p style="line-height: 1.6; color: #334155; margin-bottom: 1.5rem;"><%= business.description %></p>
+        <a href="https://wa.me/<%= business.phone.replace(/[^0-9]/g, '') %>" target="_blank" onclick="trackClick('<%= business.id %>')" class="btn-whatsapp" style="display: inline-block; padding: 0.85rem 2rem;">
+          💬 Direct WhatsApp Chat
+        </a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  function trackClick(id) {
+    fetch('/api/track-whatsapp/' + id, { method: 'POST' });
+  }
+</script>
+
+<%- include('partials/footer') %>

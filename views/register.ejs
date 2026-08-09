@@ -1,0 +1,23 @@
+<%- include('partials/header') %>
+<main class="container" style="max-width: 450px; padding-top: 4rem; padding-bottom: 4rem;">
+  <div style="background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 2rem;">
+    <h2 style="margin-bottom: 1.5rem; text-align: center;">Register Account</h2>
+    <% if (error) { %>
+      <div style="background: #fef2f2; color: #991b1b; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem;">
+        <%= error %>
+      </div>
+    <% } %>
+    <form action="/register" method="POST">
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Email Address</label>
+        <input type="email" name="email" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Password</label>
+        <input type="password" name="password" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+      </div>
+      <button type="submit" class="btn-cta" style="width: 100%; padding: 0.85rem; border: none; cursor: pointer;">Create Account</button>
+    </form>
+  </div>
+</main>
+<%- include('partials/footer') %>

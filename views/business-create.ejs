@@ -1,0 +1,49 @@
+<%- include('partials/header') %>
+<main class="container" style="max-width: 600px; padding-top: 2rem; padding-bottom: 3rem;">
+  <div style="background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 2rem;">
+    <h2 style="margin-bottom: 1.5rem;">List Your Business</h2>
+    <form action="/dashboard/create" method="POST" enctype="multipart/form-data">
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Business Name</label>
+        <input type="text" name="name" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Category</label>
+        <select name="category" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;">
+          <option value="Restaurant & Catering">Restaurant & Catering</option>
+          <option value="Beauty & Hair">Beauty & Hair</option>
+          <option value="Professional Services">Professional Services</option>
+          <option value="Retail & Grocery">Retail & Grocery</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <div style="flex: 1;">
+          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">City</label>
+          <input type="text" name="city" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+        </div>
+        <div style="flex: 1;">
+          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Country</label>
+          <input type="text" name="country" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+        </div>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">WhatsApp / Phone Number</label>
+        <input type="text" name="phone" placeholder="+49 123 45678" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Languages Spoken</label>
+        <input type="text" name="languages" placeholder="Amharic, English, German" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Description</label>
+        <textarea name="description" rows="4" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;"></textarea>
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Cover Photo</label>
+        <input type="file" name="photo" accept="image/*" style="width: 100%;" />
+      </div>
+      <button type="submit" class="btn-cta" style="width: 100%; padding: 0.85rem; border: none; cursor: pointer;">Publish Listing</button>
+    </form>
+  </div>
+</main>
+<%- include('partials/footer') %>
