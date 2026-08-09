@@ -34,7 +34,7 @@ body {
 header {
   background: rgba(15, 23, 42, 0.98);
   color: #fff;
-  padding: 0.85rem 0;
+  padding: 0.75rem 0;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -46,11 +46,10 @@ header {
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .brand-logo {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: #fff;
   text-decoration: none;
@@ -59,11 +58,12 @@ header {
 
 .brand-logo span {
   color: var(--accent);
+  font-weight: 800;
 }
 
 .nav-links {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
@@ -71,7 +71,7 @@ header {
   color: #cbd5e1;
   text-decoration: none;
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   transition: color 0.2s;
   white-space: nowrap;
 }
@@ -83,32 +83,33 @@ header {
 .btn-cta {
   background: var(--accent);
   color: #fff !important;
-  padding: 0.45rem 0.85rem;
+  padding: 0.4rem 0.65rem;
   border-radius: 6px;
   font-weight: 600 !important;
-  font-size: 0.85rem !important;
+  font-size: 0.8rem !important;
 }
 
 /* Hero Section */
 .hero-section {
   text-align: center;
-  padding: 2.5rem 0 1.5rem 0;
+  padding: 2rem 0 1.25rem 0;
 }
 
 .hero-title {
-  font-size: 1.85rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--primary);
-  margin-bottom: 0.75rem;
-  line-height: 1.2;
+  margin-bottom: 0.6rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .hero-subtitle {
   color: #64748b;
-  font-size: 0.95rem;
-  max-width: 550px;
+  font-size: 0.92rem;
+  max-width: 480px;
   margin: 0 auto 1.5rem auto;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 /* Responsive Search Bar */
@@ -116,7 +117,7 @@ header {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-width: 550px;
+  max-width: 500px;
   margin: 0 auto;
 }
 
@@ -239,4 +240,43 @@ footer {
     width: auto;
     padding: 0.75rem 1.5rem;
   }
+}
+
+/* Subtitle single-line formatting & accent color */
+.accent-text {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.hero-subtitle.single-line {
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 639px) {
+  .hero-subtitle.single-line {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Subtitle orange styling */
+.hero-subtitle.orange-subtitle {
+  color: #d97706 !important;
+  font-weight: 500;
+}
+
+.hero-subtitle.orange-subtitle b {
+  font-weight: 800;
+}
+
+/* Subtitle black text with single orange bold word */
+.hero-subtitle.single-line {
+  color: #1e293b !important;
+}
+
+.highlight-orange {
+  color: #d97706 !important;
+  font-weight: 800 !important;
 }
