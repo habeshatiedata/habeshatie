@@ -1,3 +1,4 @@
+const citiesRouter = require('./routes/cities');
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
@@ -49,6 +50,8 @@ app.use('/', dashboardRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', brand: 'Habeshatie', timestamp: new Date() });
 });
+
+app.use('/api', citiesRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 Habeshatie Server running cleanly on http://localhost:${PORT}`);

@@ -86,9 +86,8 @@ const getCategories = (req, res) => {
 
 const getCities = (req, res) => {
   const q = (req.query.q || '').trim();
-  db.all('SELECT DISTINCT city FROM businesses WHERE city LIKE ? LIMIT 10', [`%${q}%`], (err, rows) => {
+  db.all('SELECT DISTINCT city FROM businesses WHERE city LIKE ? AND city IS NOT NULL AND city != "" LIMIT 10', [`%${q}%`], (err, rows) => {
     res.json({ cities: rows ? rows.map(r => r.city) : [] });
   });
 };
-
 module.exports = { getDirectory, getCategories, getCities, apiSearch };

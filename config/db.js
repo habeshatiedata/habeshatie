@@ -1,7 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Store SQLite database in /home/habeshatie/db/habeshatie.db
 const dbPath = path.join(__dirname, '../db/habeshatie.db');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
@@ -34,6 +33,9 @@ db.serialize(() => {
       category TEXT NOT NULL,
       city TEXT NOT NULL,
       country TEXT NOT NULL,
+      address TEXT,
+      latitude REAL,
+      longitude REAL,
       phone TEXT NOT NULL,
       description TEXT NOT NULL,
       photo TEXT DEFAULT '/uploads/default.jpg',
@@ -70,7 +72,6 @@ db.serialize(() => {
     )
   `);
 
-  // Indexes for high performance searches
   db.run(`CREATE INDEX IF NOT EXISTS idx_businesses_slug ON businesses(slug)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_businesses_category ON businesses(category)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_businesses_country ON businesses(country)`);

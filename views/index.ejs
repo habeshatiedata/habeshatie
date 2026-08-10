@@ -14,13 +14,13 @@
   </section>
 
   <!-- Business Cards Grid -->
-  <section>
-    <% if (businesses.length === 0) { %>
-      <div style="text-align: center; padding: 2.5rem 1rem; background: #fff; border-radius: 12px; border: 1px solid var(--border);">
-        <p style="color: #64748b; font-size: 0.95rem;">No businesses found matching your request.</p>
-      </div>
-    <% } else { %>
-      <div class="grid">
+  <section id="businessSection">
+    <div id="businessGrid" class="grid">
+      <% if (businesses.length === 0) { %>
+        <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; background: #fff; border-radius: 12px; border: 1px solid var(--border);">
+          <p style="color: #64748b; font-size: 0.95rem;">No businesses found matching your request.</p>
+        </div>
+      <% } else { %>
         <% businesses.forEach(b => { %>
           <div class="card">
             <img src="<%= b.photo %>" alt="<%= b.name %>" class="card-img" />
@@ -34,8 +34,8 @@
             </div>
           </div>
         <% }) %>
-      </div>
-    <% } %>
+      <% } %>
+    </div>
   </section>
 </main>
 

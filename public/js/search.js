@@ -1,26 +1,26 @@
 document.addEventListener('DOMContentLoaded', function () {
+  const searchForm = document.getElementById('searchForm');
   const searchInput = document.getElementById('searchInput');
   const locationInput = document.getElementById('locationInput');
   const radiusSelect = document.getElementById('radiusSelect');
-  const businessContainer = document.querySelector('.business-grid') || document.querySelector('.business-list') || document.getElementById('businessList');
+  const cityDropdown = document.getElementById('cityDropdown');
+  const businessGrid = document.getElementById('businessGrid');
 
   let currentLat = null;
   let currentLon = null;
 
-  // 1. Initial browser GPS check
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         currentLat = pos.coords.latitude;
         currentLon = pos.coords.longitude;
-
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`)
           .then(res => res.json())
           .then(data => {
             if (data && data.address) {
-              const city = data.address.city || data.address.town || data.address.village || data.address.county || '';
-              if (locationInput && city && !locationInput.value) {
-                locationInput.value = city;
+              const detectedCity = data.address.city || data.address.town || data.address.village || data.address.county || '';
+              if (locationInput && detectedCity && !locationInput.value) {
+                locationInput.value = detectedCity;
               }
             }
             executeSearch();
@@ -34,7 +34,48 @@ document.addEventListener('DOMContentLoaded', function () {
     executeSearch();
   }
 
-  // 2. Main Search Execution Function
+  async function fetchCitiesFromDB(query) {
+    if (!cityDropdown) return;
+
+    const val = query.trim();
+    if (!val) {
+      hideCityDropdown();
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/cities?q=${encodeURIComponent(val)}`);
+      const data = await res.json();
+      const items = data.cities || [];
+
+      if (items.length === 0) {
+        hideCityDropdown();
+        return;
+      }
+
+      cityDropdown.innerHTML = items.map(cityName => `
+        <div class="city-item" data-city="${cityName}" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9;">
+          <span style="font-size: 1rem;">📍</span>
+          <span style="font-size: 0.9rem; font-weight: 600; color: #1e293b;">${cityName}</span>
+        </div>
+      `).join('');
+
+      cityDropdown.classList.remove('hidden');
+      cityDropdown.style.display = 'block';
+    } catch (err) {
+      console.error('Error fetching autocomplete suggestions:', err);
+    }
+  }
+
+  function hideCityDropdown() {
+    if (!cityDropdown) return;
+    setTimeout(() => {
+      cityDropdown.innerHTML = '';
+      cityDropdown.classList.add('hidden');
+      cityDropdown.style.display = 'none';
+    }, 200);
+  }
+
   async function executeSearch() {
     const q = searchInput ? searchInput.value.trim() : '';
     const where = locationInput ? locationInput.value.trim() : '';
@@ -43,17 +84,16 @@ document.addEventListener('DOMContentLoaded', function () {
     let lat = currentLat;
     let lon = currentLon;
 
-    // Geocode typed location if GPS coordinates aren't set
     if ((!lat || !lon) && where) {
       try {
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(where)}&limit=1`);
         const geoData = await geoRes.json();
         if (geoData && geoData.length > 0) {
-          lat = geoData[0].lat;
-          lon = geoData[0].lon;
+          lat = parseFloat(geoData[0].lat);
+          lon = parseFloat(geoData[0].lon);
         }
       } catch (err) {
-        console.error('Client geocoding error:', err);
+        console.error('Geocoding error:', err);
       }
     }
 
@@ -62,63 +102,91 @@ document.addEventListener('DOMContentLoaded', function () {
       url += `&lat=${lat}&lon=${lon}`;
     }
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => renderCards(data.results || []))
-      .catch(err => console.error('Search error:', err));
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      renderCards(data.results || []);
+    } catch (err) {
+      console.error('Search fetch error:', err);
+    }
   }
 
-  // 3. Render Cards
   function renderCards(businesses) {
-    if (!businessContainer) return;
+    if (!businessGrid) return;
 
-    if (businesses.length === 0) {
-      businessContainer.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: #f8fafc; border-radius: 12px; margin-top: 20px;">
-          <p style="font-size: 1.1rem; color: #64748b; font-weight: 500;">No businesses found within this distance.</p>
+    if (!businesses || businesses.length === 0) {
+      businessGrid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; background: #fff; border-radius: 12px; border: 1px solid var(--border);">
+          <p style="color: #64748b; font-size: 0.95rem;">No businesses found matching your request.</p>
         </div>`;
       return;
     }
 
-    businessContainer.innerHTML = businesses.map(b => {
+    businessGrid.innerHTML = businesses.map(b => {
       const distTag = (b.distance !== undefined && b.distance !== null)
-        ? `<span style="color:#2563eb; font-weight:600; margin-left:6px;">(${b.distance.toFixed(1)} mi)</span>`
+        ? `<span style="color:#2563eb; font-weight:600; margin-left:4px;">(${b.distance.toFixed(1)} mi away)</span>`
         : '';
 
-      const imageTag = b.image_url 
-        ? `<img src="${b.image_url}" alt="${b.name}" style="width:100%; height:140px; object-fit:cover; border-radius:8px 8px 0 0;" onError="this.style.display='none';">` 
-        : '';
+      const photoUrl = b.photo || '/uploads/default.jpg';
 
       return `
-        <div class="business-card" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
-          ${imageTag}
-          <div style="padding:16px;">
-            <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">${b.category || 'BUSINESS'}</span>
-            <h3 style="margin:4px 0 8px 0; font-size:1.1rem; font-weight:700; color:#0f172a;">${b.name || 'Business'}</h3>
-            <p style="color:#64748b; font-size:0.85rem; margin-bottom:12px;">
+        <div class="card">
+          <img src="${photoUrl}" alt="${b.name || 'Business'}" class="card-img" />
+          <div class="card-body">
+            <span class="badge">${b.category || 'BUSINESS'}</span>
+            <h3 style="margin-bottom: 0.5rem;">
+              <a href="/b/${b.slug || b.id}" style="color: var(--primary); text-decoration: none;">${b.name || 'Business'}</a>
+            </h3>
+            <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 0.75rem;">
               📍 ${b.city || ''}, ${b.country || 'UK'} ${distTag}
             </p>
-            <a href="/business/${b.id || b.slug}" style="display:block; text-align:center; background:#10b981; color:#fff; text-decoration:none; padding:10px; border-radius:6px; font-weight:600;">
-              View Profile & Contact
-            </a>
+            <a href="/b/${b.slug || b.id}" class="btn-whatsapp">View Profile & Contact</a>
           </div>
         </div>
       `;
     }).join('');
   }
 
-  // Live Listeners
-  radiusSelect?.addEventListener('change', () => {
-    executeSearch();
-  });
+  let searchTimer = null;
+  let cityTimer = null;
 
-  searchInput?.addEventListener('change', () => {
-    executeSearch();
-  });
-
-  locationInput?.addEventListener('change', () => {
-    currentLat = null; // Clear GPS coords when user types a new location manually
+  locationInput?.addEventListener('input', (e) => {
+    currentLat = null;
     currentLon = null;
+
+    clearTimeout(cityTimer);
+    cityTimer = setTimeout(() => fetchCitiesFromDB(e.target.value), 200);
+
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(executeSearch, 350);
+  });
+
+  locationInput?.addEventListener('focus', (e) => {
+    if (e.target.value.trim()) {
+      fetchCitiesFromDB(e.target.value);
+    }
+  });
+
+  locationInput?.addEventListener('blur', hideCityDropdown);
+
+  cityDropdown?.addEventListener('mousedown', (e) => {
+    const item = e.target.closest('.city-item');
+    if (item) {
+      const selectedCity = item.getAttribute('data-city');
+      locationInput.value = selectedCity;
+      currentLat = null;
+      currentLon = null;
+      hideCityDropdown();
+      executeSearch();
+    }
+  });
+
+  radiusSelect?.addEventListener('change', executeSearch);
+  searchInput?.addEventListener('change', executeSearch);
+
+  searchForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    hideCityDropdown();
     executeSearch();
   });
 });
