@@ -7,6 +7,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
   let currentResults = [];
   let displayedCount = 5;
+  let userLat = null;
+  let userLon = null;
+
+  // 1. Auto-detect user location via HTML5 Geolocation or Reverse Geocoding
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        userLat = position.coords.latitude;
+        userLon = position.coords.longitude;
+
+        // Geocode coordinates to city name using free OpenStreetMap API
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLon}`)
+          .then(res => res.json())
+          .then(geoData => {
+            if (geoData && geoData.address) {
+              const detectedCity = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.county || '';
+              if (locationInput && detectedCity) {
+                locationInput.value = detectedCity;
+              }
+            }
+            fetchSearchResults();
+          })
+          .catch(() => fetchSearchResults());
+      },
+      (error) => {
+        // Fallback: If location permission denied or unavailable, search immediately with text input
+        fetchSearchResults();
+      },
+      { timeout: 8000 }
+    );
+  } else {
+    fetchSearchResults();
+  }
 
   function fetchSearchResults(overrideParams = {}) {
     const q = searchInput ? searchInput.value : '';
@@ -15,6 +48,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let url = `/api/search?q=${encodeURIComponent(q)}&where=${encodeURIComponent(where)}&radius=${encodeURIComponent(radius)}`;
     
+    if (userLat && userLon) {
+      url += `&lat=${userLat}&lon=${userLon}`;
+    }
+
     if (overrideParams.country) {
       url += `&country=${encodeURIComponent(overrideParams.country)}`;
     }
@@ -88,13 +125,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (b.service_type === 'both' || b.is_online_and_instore) {
       serviceBadge = `<span style="background:#dbeafe; color:#1e40af; font-size:0.75rem; padding:3px 8px; border-radius:12px; font-weight:600; margin-left:6px;">In-Store & Online</span>`;
     } else if (b.service_type === 'delivery' || b.service_type === 'online') {
-      serviceBadge = `<span style="background:#dcfce7; color:#166534; font-size:0.75rem; padding:3px 8px; border-radius:12px; font-weight:600; margin-left:6px;">Online / Delivery Available</span>`;
+      serviceBadge = `<span style="background:#dcfce7; color:#166534; font-size:0.75rem; padding:3px 8px; border-radius:12px; font-weight:600; margin-left:6px;">Online / Delivery</span>`;
     }
 
     let featuredBadge = b.is_featured ? `<span style="background:#fef3c7; color:#92400e; font-size:0.75rem; padding:3px 8px; border-radius:12px; font-weight:600;">Featured</span>` : '';
 
     return `
-      <div class="business-card" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:16px; position:relative;">
+      <div class="business-card" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; position:relative;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
           <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:#0f172a;">${b.name || 'Business'}</h3>
           <div>${featuredBadge} ${serviceBadge}</div>
@@ -118,6 +155,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const q = this.value.trim();
       if (q.length < 1) {
         cityDropdown.classList.add('hidden');
+        fetchSearchResults();
         return;
       }
 
@@ -136,6 +174,8 @@ document.addEventListener('DOMContentLoaded', function () {
             item.addEventListener('click', function () {
               locationInput.value = this.textContent;
               cityDropdown.classList.add('hidden');
+              userLat = null; // Reset lat/lon so search uses exact typed city text
+              userLon = null;
               fetchSearchResults();
             });
           });
@@ -146,4 +186,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // Auto Search triggers
   radiusSelect?.addEventListener('change', () => fetchSearchResults());
   searchInput?.addEventListener('change', () => fetchSearchResults());
+  locationInput?.addEventListener('change', () => {
+    userLat = null;
+    userLon = null;
+    fetchSearchResults();
+  });
 });

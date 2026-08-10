@@ -1,5 +1,17 @@
 const db = require('../config/db');
 
+// City Coordinates map for fallback distance calculation
+const CITY_COORDS = {
+  'sunderland': { lat: 54.9069, lon: -1.3811 },
+  'newcastle': { lat: 54.9783, lon: -1.6178 },
+  'newcastle upon tyne': { lat: 54.9783, lon: -1.6178 },
+  'london': { lat: 51.5074, lon: -0.1278 },
+  'manchester': { lat: 53.4808, lon: -2.2426 },
+  'birmingham': { lat: 52.4862, lon: -1.8904 },
+  'leeds': { lat: 53.8008, lon: -1.5491 },
+  'glasgow': { lat: 55.8642, lon: -4.2518 }
+};
+
 function getDistanceInMiles(lat1, lon1, lat2, lon2) {
   const R = 3958.8;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -54,7 +66,6 @@ const getCategories = (req, res) => {
   }
 };
 
-// Purely dynamic city query directly from registered businesses
 const getCities = (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.json({ cities: [] });
@@ -81,9 +92,18 @@ const apiSearch = (req, res) => {
   const q = (req.query.q || req.query.search || '').trim();
   const where = (req.query.where || req.query.location || '').trim().toLowerCase();
   const countryFilter = (req.query.country || '').trim().toLowerCase();
-  const userLat = parseFloat(req.query.lat);
-  const userLon = parseFloat(req.query.lon);
-  const maxRadius = parseFloat(req.query.radius) || 25; // Default 25 miles
+  let userLat = parseFloat(req.query.lat);
+  let userLon = parseFloat(req.query.lon);
+  const maxRadius = parseFloat(req.query.radius) || 25;
+
+  // Resolve typed city name to lat/lon if lat/lon was not provided by browser GPS
+  if ((isNaN(userLat) || isNaN(userLon)) && where) {
+    const cityMatch = CITY_COORDS[where];
+    if (cityMatch) {
+      userLat = cityMatch.lat;
+      userLon = cityMatch.lon;
+    }
+  }
 
   let query = 'SELECT * FROM businesses WHERE 1=1';
   let params = [];
@@ -107,7 +127,7 @@ const apiSearch = (req, res) => {
 
     let results = rows || [];
 
-    // Prioritize: Featured/Recommended first, then Online/Delivery
+    // Prioritize Featured then Online/Delivery
     results.sort((a, b) => {
       if (b.is_featured !== a.is_featured) return (b.is_featured || 0) - (a.is_featured || 0);
       const aOnline = (a.service_type === 'online' || a.service_type === 'delivery' || a.service_type === 'both') ? 1 : 0;
@@ -117,24 +137,36 @@ const apiSearch = (req, res) => {
 
     if (!isNaN(userLat) && !isNaN(userLon) && !countryFilter) {
       results = results.filter(b => {
-        // Online/delivery businesses are available regardless of strict distance radius
-        if (b.service_type === 'online' || b.service_type === 'delivery' || b.service_type === 'both') {
+        // Online-only businesses available everywhere
+        if (b.service_type === 'online' || b.service_type === 'delivery') {
           return true;
         }
 
         let bLat = parseFloat(b.latitude);
         let bLon = parseFloat(b.longitude);
-        if (isNaN(bLat) || isNaN(bLon)) return false;
+
+        // Fallback coordinates lookup for businesses in DB missing lat/lon
+        if ((isNaN(bLat) || isNaN(bLon)) && b.city) {
+          const bCityKey = b.city.trim().toLowerCase();
+          if (CITY_COORDS[bCityKey]) {
+            bLat = CITY_COORDS[bCityKey].lat;
+            bLon = CITY_COORDS[bCityKey].lon;
+          }
+        }
+
+        if (isNaN(bLat) || isNaN(bLon)) {
+          // If no lat/lon available, fall back to exact city name matching
+          return b.city && b.city.toLowerCase() === where;
+        }
 
         const distance = getDistanceInMiles(userLat, userLon, bLat, bLon);
         return distance <= maxRadius;
       });
     } else if (where && !countryFilter) {
+      // Strict exact city match if geocoding coordinates are completely absent
       results = results.filter(b => 
-        (b.service_type === 'online' || b.service_type === 'delivery' || b.service_type === 'both') ||
-        (b.city && b.city.toLowerCase().includes(where)) ||
-        (b.country && b.country.toLowerCase().includes(where)) ||
-        (b.name && b.name.toLowerCase().includes(where))
+        (b.service_type === 'online' || b.service_type === 'delivery') ||
+        (b.city && b.city.toLowerCase().trim() === where)
       );
     }
 
