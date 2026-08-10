@@ -1,208 +1,149 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function () {
   const searchInput = document.getElementById('searchInput');
   const locationInput = document.getElementById('locationInput');
-  const cityDropdown = document.getElementById('cityDropdown');
   const radiusSelect = document.getElementById('radiusSelect');
-  const cardGrid = document.querySelector('.grid');
+  const cityDropdown = document.getElementById('cityDropdown');
+  const businessContainer = document.querySelector('.business-grid') || document.getElementById('businessList');
 
-  let currentLat = null;
-  let currentLon = null;
+  let currentResults = [];
+  let displayedCount = 5;
 
-  function applyPlaceholder(img) {
-    if (img.dataset.fallbackApplied) return;
-    img.dataset.fallbackApplied = 'true';
-    img.onerror = null;
-    img.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23f1f5f9"/%3E%3Ctext x="50%25" y="50%25" fill="%2394a3b8" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" dy=".3em"%3EHabeshatie Business%3C/text%3E%3C/svg%3E';
-  }
+  function fetchSearchResults(overrideParams = {}) {
+    const q = searchInput ? searchInput.value : '';
+    const where = locationInput ? locationInput.value : '';
+    const radius = radiusSelect ? radiusSelect.value : '25';
 
-  function fixBrokenImages(container = document) {
-    const images = container.querySelectorAll('img');
-    images.forEach(img => {
-      if (img.complete && img.naturalWidth === 0) applyPlaceholder(img);
-      img.onerror = function() { applyPlaceholder(this); };
-    });
-  }
-
-  async function loadCategories() {
-    if (!searchInput) return;
-    try {
-      const res = await fetch('/api/categories');
-      if (!res.ok) return;
-      const data = await res.json();
-      const categories = Array.isArray(data) ? data : (data.categories || []);
-      if (categories.length > 0) {
-        const currentVal = searchInput.value;
-        searchInput.innerHTML = '<option value="">All Businesses & Services</option>';
-        categories.forEach(cat => {
-          const opt = document.createElement('option');
-          opt.value = typeof cat === 'string' ? cat : (cat.name || cat.category || cat);
-          opt.textContent = opt.value;
-          if (opt.value.toLowerCase() === currentVal.toLowerCase()) opt.selected = true;
-          searchInput.appendChild(opt);
-        });
-      }
-    } catch (err) {
-      console.error('Error loading categories:', err);
+    let url = `/api/search?q=${encodeURIComponent(q)}&where=${encodeURIComponent(where)}&radius=${encodeURIComponent(radius)}`;
+    
+    if (overrideParams.country) {
+      url += `&country=${encodeURIComponent(overrideParams.country)}`;
     }
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        currentResults = data.results || [];
+        displayedCount = 5;
+        renderResults();
+      })
+      .catch(err => console.error('Search fetch error:', err));
   }
 
-  async function executeSearch() {
-    const q = searchInput ? searchInput.value.trim() : '';
-    const where = locationInput ? locationInput.value.trim() : '';
-    const radius = radiusSelect ? radiusSelect.value : '10';
+  function renderResults() {
+    if (!businessContainer) return;
 
-    try {
-      const params = new URLSearchParams();
-      if (q) params.append('q', q);
-      if (where) params.append('where', where);
-      if (radius) params.append('radius', radius);
-      if (currentLat && currentLon) {
-        params.append('lat', currentLat);
-        params.append('lon', currentLon);
-      }
-
-      const res = await fetch('/api/search?' + params.toString());
-      if (res.ok) {
-        const data = await res.json();
-        renderCards(data.results || []);
-      }
-    } catch (err) {
-      console.error('API search error:', err);
-    }
-  }
-
-  function renderCards(businesses) {
-    if (!cardGrid) return;
-    cardGrid.innerHTML = '';
-
-    if (!businesses || businesses.length === 0) {
-      cardGrid.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 2.5rem 1rem; background: #fff; border-radius: 12px; border: 1px solid var(--border);">
-          <p style="color: #64748b; font-size: 0.95rem;">No businesses found matching your request.</p>
+    if (currentResults.length === 0) {
+      businessContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 12px; margin-top: 20px;">
+          <p style="font-size: 1.1rem; color: #475569; margin-bottom: 16px; font-weight: 500;">
+            No businesses found within this area.
+          </p>
+          <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <button id="btnExploreUK" style="background: #2563eb; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+              Explore UK Businesses
+            </button>
+            <button id="btnExploreWorldwide" style="background: #059669; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+              Explore Worldwide
+            </button>
+          </div>
         </div>
       `;
+
+      document.getElementById('btnExploreUK')?.addEventListener('click', () => {
+        if (locationInput) locationInput.value = '';
+        fetchSearchResults({ country: 'UK' });
+      });
+
+      document.getElementById('btnExploreWorldwide')?.addEventListener('click', () => {
+        if (locationInput) locationInput.value = '';
+        fetchSearchResults();
+      });
+
       return;
     }
 
-    businesses.forEach(b => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${b.photo || ''}" alt="${b.name || 'Business'}" class="card-img" />
-        <div class="card-body">
-          <span class="badge">${b.category || 'Business'}</span>
-          <h3 style="margin-bottom: 0.5rem;">
-            <a href="/b/${b.slug}" style="color: var(--primary); text-decoration: none;">${b.name}</a>
-          </h3>
-          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 0.75rem;">📍 ${b.city || ''}, ${b.country || 'UK'}</p>
-          <a href="/b/${b.slug}" class="btn-whatsapp">View Profile & Contact</a>
+    const itemsToRender = currentResults.slice(0, displayedCount);
+    let html = itemsToRender.map(b => createBusinessCardHTML(b)).join('');
+
+    if (currentResults.length > displayedCount) {
+      html += `
+        <div style="grid-column: 1 / -1; text-align: center; margin-top: 24px;">
+          <button id="btnSeeMore" style="background: #10b981; color: white; border: none; padding: 12px 28px; font-size: 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+            See More (${currentResults.length - displayedCount} remaining)
+          </button>
         </div>
       `;
-      cardGrid.appendChild(card);
+    }
+
+    businessContainer.innerHTML = html;
+
+    document.getElementById('btnSeeMore')?.addEventListener('click', () => {
+      displayedCount += 5;
+      renderResults();
     });
-
-    fixBrokenImages(cardGrid);
   }
 
-  // Request browser location and set exact city name into input box
-  function detectAndSetUserCity() {
-    if (!navigator.geolocation) return;
+  function createBusinessCardHTML(b) {
+    let serviceBadge = '';
+    if (b.service_type === 'both' || b.is_online_and_instore) {
+      serviceBadge = `<span style="background:#dbeafe; color:#1e40af; font-size:0.75rem; padding:3px 8px; border-radius:12px; font-weight:600; margin-left:6px;">In-Store & Online</span>`;
+    } else if (b.service_type === 'delivery' || b.service_type === 'online') {
+      serviceBadge = `<span style="background:#dcfce7; color:#166534; font-size:0.75rem; padding:3px 8px; border-radius:12px; font-weight:600; margin-left:6px;">Online / Delivery Available</span>`;
+    }
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          currentLat = pos.coords.latitude;
-          currentLon = pos.coords.longitude;
+    let featuredBadge = b.is_featured ? `<span style="background:#fef3c7; color:#92400e; font-size:0.75rem; padding:3px 8px; border-radius:12px; font-weight:600;">Featured</span>` : '';
 
-          // Reverse geocode lat/lon to exact city name using OpenStreetMap
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`);
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            const userCity = addr.city || addr.town || addr.village || addr.suburb || addr.county || '';
-
-            if (locationInput && userCity) {
-              locationInput.value = userCity;
-            }
-          }
-          executeSearch();
-        } catch (err) {
-          console.error('Location lookup error:', err);
-          executeSearch();
-        }
-      },
-      (err) => {
-        console.log('User denied location or location unavailable:', err.message);
-        executeSearch();
-      },
-      { timeout: 8000 }
-    );
+    return `
+      <div class="business-card" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:16px; position:relative;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+          <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:#0f172a;">${b.name || 'Business'}</h3>
+          <div>${featuredBadge} ${serviceBadge}</div>
+        </div>
+        <p style="color:#64748b; font-size:0.85rem; margin:4px 0 12px 0;">
+          📍 ${b.city || 'Location unavailable'}, ${b.country || 'UK'}
+        </p>
+        <p style="color:#334155; font-size:0.9rem; line-height:1.4; margin-bottom:12px;">
+          ${(b.description || '').substring(0, 110)}...
+        </p>
+        <a href="/business/${b.id || b.slug}" style="display:inline-block; background:#10b981; color:#fff; text-decoration:none; padding:8px 16px; border-radius:6px; font-size:0.85rem; font-weight:600;">
+          View Profile & Contact
+        </a>
+      </div>
+    `;
   }
 
-  // Handle typing suggestions
-  let cityDebounce = null;
-  if (locationInput) {
-    locationInput.addEventListener('input', () => {
-      const val = locationInput.value.trim();
-
-      // Reset lat/lon when user custom types
-      currentLat = null;
-      currentLon = null;
-
-      clearTimeout(cityDebounce);
-
-      if (val.length < 1) {
-        if (cityDropdown) cityDropdown.classList.add('hidden');
-        executeSearch();
+  // Dynamic City Autocomplete
+  if (locationInput && cityDropdown) {
+    locationInput.addEventListener('input', function () {
+      const q = this.value.trim();
+      if (q.length < 1) {
+        cityDropdown.classList.add('hidden');
         return;
       }
 
-      cityDebounce = setTimeout(async () => {
-        try {
-          const res = await fetch(`/api/cities?q=${encodeURIComponent(val)}`);
-          if (res.ok) {
-            const data = await res.json();
-            const cities = data.cities || [];
-
-            if (cityDropdown) {
-              cityDropdown.innerHTML = '';
-              if (cities.length > 0) {
-                cities.forEach(cityName => {
-                  const item = document.createElement('div');
-                  item.className = 'city-item';
-                  item.textContent = cityName;
-                  item.addEventListener('click', () => {
-                    locationInput.value = cityName;
-                    cityDropdown.classList.add('hidden');
-                    executeSearch();
-                  });
-                  cityDropdown.appendChild(item);
-                });
-                cityDropdown.classList.remove('hidden');
-              } else {
-                cityDropdown.classList.add('hidden');
-              }
-            }
+      fetch(`/api/cities?q=${encodeURIComponent(q)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.cities || data.cities.length === 0) {
+            cityDropdown.classList.add('hidden');
+            return;
           }
-        } catch (err) {
-          console.error('City autocomplete fetch error:', err);
-        }
-        executeSearch();
-      }, 250);
+
+          cityDropdown.innerHTML = data.cities.map(c => `<div class="city-item" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9;">${c}</div>`).join('');
+          cityDropdown.classList.remove('hidden');
+
+          cityDropdown.querySelectorAll('.city-item').forEach(item => {
+            item.addEventListener('click', function () {
+              locationInput.value = this.textContent;
+              cityDropdown.classList.add('hidden');
+              fetchSearchResults();
+            });
+          });
+        });
     });
   }
 
-  // Hide dropdown on outside click
-  document.addEventListener('click', (e) => {
-    if (cityDropdown && locationInput && !locationInput.contains(e.target) && !cityDropdown.contains(e.target)) {
-      cityDropdown.classList.add('hidden');
-    }
-  });
-
-  fixBrokenImages();
-  loadCategories();
-  detectAndSetUserCity();
-
-  if (searchInput) searchInput.addEventListener('change', executeSearch);
-  if (radiusSelect) radiusSelect.addEventListener('change', executeSearch);
+  // Auto Search triggers
+  radiusSelect?.addEventListener('change', () => fetchSearchResults());
+  searchInput?.addEventListener('change', () => fetchSearchResults());
 });

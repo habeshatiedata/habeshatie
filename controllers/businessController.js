@@ -12,22 +12,6 @@ function getDistanceInMiles(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-const cityCoords = {
-  'sunderland': { lat: 54.9069, lon: -1.3811 },
-  'newcastle': { lat: 54.9783, lon: -1.6178 },
-  'london': { lat: 51.5074, lon: -0.1278 },
-  'manchester': { lat: 53.4808, lon: -2.2426 },
-  'birmingham': { lat: 52.4862, lon: -1.8904 },
-  'leeds': { lat: 53.8008, lon: -1.5491 },
-  'glasgow': { lat: 55.8642, lon: -4.2518 },
-  'edinburgh': { lat: 55.9533, lon: -3.1883 }
-};
-
-const defaultUKCities = [
-  'London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 
-  'Edinburgh', 'Newcastle', 'Sunderland', 'Liverpool', 'Bristol', 'Sheffield'
-];
-
 const getDirectory = (req, res) => {
   const { search, category, country } = req.query;
   let query = 'SELECT * FROM businesses WHERE 1=1';
@@ -70,28 +54,36 @@ const getCategories = (req, res) => {
   }
 };
 
+// Purely dynamic city query directly from registered businesses
 const getCities = (req, res) => {
-  const q = (req.query.q || '').trim().toLowerCase();
+  const q = (req.query.q || '').trim();
   if (!q) return res.json({ cities: [] });
 
-  const query = `SELECT DISTINCT city FROM businesses WHERE LOWER(city) LIKE ? AND city IS NOT NULL AND city != '' LIMIT 8`;
-  db.all(query, [`${q}%`], (err, rows) => {
-    let dbCities = (rows || []).map(r => r.city);
-    
-    // Merge DB cities with standard UK cities list so cities like London always auto-complete
-    let combined = [...new Set([...dbCities, ...defaultUKCities])];
-    let matched = combined.filter(c => c.toLowerCase().startsWith(q)).slice(0, 8);
+  const query = `
+    SELECT DISTINCT city 
+    FROM businesses 
+    WHERE city LIKE ? AND city IS NOT NULL AND TRIM(city) != '' 
+    ORDER BY city ASC 
+    LIMIT 10
+  `;
 
-    res.json({ cities: matched });
+  db.all(query, [`%${q}%`], (err, rows) => {
+    if (err) {
+      console.error('Error fetching dynamic cities:', err);
+      return res.status(500).json({ cities: [] });
+    }
+    const cities = rows ? rows.map(r => r.city.trim()) : [];
+    res.json({ cities });
   });
 };
 
 const apiSearch = (req, res) => {
   const q = (req.query.q || req.query.search || '').trim();
   const where = (req.query.where || req.query.location || '').trim().toLowerCase();
+  const countryFilter = (req.query.country || '').trim().toLowerCase();
   const userLat = parseFloat(req.query.lat);
   const userLon = parseFloat(req.query.lon);
-  const maxRadius = parseFloat(req.query.radius) || 10;
+  const maxRadius = parseFloat(req.query.radius) || 25; // Default 25 miles
 
   let query = 'SELECT * FROM businesses WHERE 1=1';
   let params = [];
@@ -102,6 +94,11 @@ const apiSearch = (req, res) => {
     params.push(term, term, term);
   }
 
+  if (countryFilter) {
+    query += ' AND LOWER(country) LIKE ?';
+    params.push(`%${countryFilter}%`);
+  }
+
   db.all(query, params, (err, rows) => {
     if (err) {
       console.error('Search API Error:', err);
@@ -109,39 +106,32 @@ const apiSearch = (req, res) => {
     }
 
     let results = rows || [];
-    let targetLat = userLat;
-    let targetLon = userLon;
 
-    if ((isNaN(targetLat) || isNaN(targetLon)) && where) {
-      for (const [city, coords] of Object.entries(cityCoords)) {
-        if (where.includes(city)) {
-          targetLat = coords.lat;
-          targetLon = coords.lon;
-          break;
-        }
-      }
-    }
+    // Prioritize: Featured/Recommended first, then Online/Delivery
+    results.sort((a, b) => {
+      if (b.is_featured !== a.is_featured) return (b.is_featured || 0) - (a.is_featured || 0);
+      const aOnline = (a.service_type === 'online' || a.service_type === 'delivery' || a.service_type === 'both') ? 1 : 0;
+      const bOnline = (b.service_type === 'online' || b.service_type === 'delivery' || b.service_type === 'both') ? 1 : 0;
+      return bOnline - aOnline;
+    });
 
-    if (!isNaN(targetLat) && !isNaN(targetLon)) {
+    if (!isNaN(userLat) && !isNaN(userLon) && !countryFilter) {
       results = results.filter(b => {
+        // Online/delivery businesses are available regardless of strict distance radius
+        if (b.service_type === 'online' || b.service_type === 'delivery' || b.service_type === 'both') {
+          return true;
+        }
+
         let bLat = parseFloat(b.latitude);
         let bLon = parseFloat(b.longitude);
-
-        if ((isNaN(bLat) || isNaN(bLon)) && b.city) {
-          const cityKey = b.city.trim().toLowerCase();
-          if (cityCoords[cityKey]) {
-            bLat = cityCoords[cityKey].lat;
-            bLon = cityCoords[cityKey].lon;
-          }
-        }
-
         if (isNaN(bLat) || isNaN(bLon)) return false;
 
-        const distance = getDistanceInMiles(targetLat, targetLon, bLat, bLon);
+        const distance = getDistanceInMiles(userLat, userLon, bLat, bLon);
         return distance <= maxRadius;
       });
-    } else if (where) {
+    } else if (where && !countryFilter) {
       results = results.filter(b => 
+        (b.service_type === 'online' || b.service_type === 'delivery' || b.service_type === 'both') ||
         (b.city && b.city.toLowerCase().includes(where)) ||
         (b.country && b.country.toLowerCase().includes(where)) ||
         (b.name && b.name.toLowerCase().includes(where))
