@@ -23,6 +23,11 @@ const cityCoords = {
   'edinburgh': { lat: 55.9533, lon: -3.1883 }
 };
 
+const defaultUKCities = [
+  'London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 
+  'Edinburgh', 'Newcastle', 'Sunderland', 'Liverpool', 'Bristol', 'Sheffield'
+];
+
 const getDirectory = (req, res) => {
   const { search, category, country } = req.query;
   let query = 'SELECT * FROM businesses WHERE 1=1';
@@ -66,14 +71,18 @@ const getCategories = (req, res) => {
 };
 
 const getCities = (req, res) => {
-  const q = (req.query.q || '').trim();
+  const q = (req.query.q || '').trim().toLowerCase();
   if (!q) return res.json({ cities: [] });
 
-  const query = `SELECT DISTINCT city FROM businesses WHERE city LIKE ? AND city IS NOT NULL AND city != '' LIMIT 8`;
+  const query = `SELECT DISTINCT city FROM businesses WHERE LOWER(city) LIKE ? AND city IS NOT NULL AND city != '' LIMIT 8`;
   db.all(query, [`${q}%`], (err, rows) => {
-    if (err) return res.status(500).json({ cities: [] });
-    const cities = rows ? rows.map(r => r.city) : [];
-    res.json({ cities });
+    let dbCities = (rows || []).map(r => r.city);
+    
+    // Merge DB cities with standard UK cities list so cities like London always auto-complete
+    let combined = [...new Set([...dbCities, ...defaultUKCities])];
+    let matched = combined.filter(c => c.toLowerCase().startsWith(q)).slice(0, 8);
+
+    res.json({ cities: matched });
   });
 };
 
@@ -126,7 +135,7 @@ const apiSearch = (req, res) => {
           }
         }
 
-        if (isNaN(bLat) || isNaN(bLon)) return true;
+        if (isNaN(bLat) || isNaN(bLon)) return false;
 
         const distance = getDistanceInMiles(targetLat, targetLon, bLat, bLon);
         return distance <= maxRadius;

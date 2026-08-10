@@ -56,6 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q) params.append('q', q);
       if (where) params.append('where', where);
       if (radius) params.append('radius', radius);
+      if (currentLat && currentLon) {
+        params.append('lat', currentLat);
+        params.append('lon', currentLon);
+      }
 
       const res = await fetch('/api/search?' + params.toString());
       if (res.ok) {
@@ -100,11 +104,50 @@ document.addEventListener('DOMContentLoaded', () => {
     fixBrokenImages(cardGrid);
   }
 
+  // Request browser location and set exact city name into input box
+  function detectAndSetUserCity() {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          currentLat = pos.coords.latitude;
+          currentLon = pos.coords.longitude;
+
+          // Reverse geocode lat/lon to exact city name using OpenStreetMap
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`);
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const userCity = addr.city || addr.town || addr.village || addr.suburb || addr.county || '';
+
+            if (locationInput && userCity) {
+              locationInput.value = userCity;
+            }
+          }
+          executeSearch();
+        } catch (err) {
+          console.error('Location lookup error:', err);
+          executeSearch();
+        }
+      },
+      (err) => {
+        console.log('User denied location or location unavailable:', err.message);
+        executeSearch();
+      },
+      { timeout: 8000 }
+    );
+  }
+
   // Handle typing suggestions
   let cityDebounce = null;
   if (locationInput) {
     locationInput.addEventListener('input', () => {
       const val = locationInput.value.trim();
+
+      // Reset lat/lon when user custom types
+      currentLat = null;
+      currentLon = null;
 
       clearTimeout(cityDebounce);
 
@@ -149,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Hide dropdown when clicking outside
+  // Hide dropdown on outside click
   document.addEventListener('click', (e) => {
     if (cityDropdown && locationInput && !locationInput.contains(e.target) && !cityDropdown.contains(e.target)) {
       cityDropdown.classList.add('hidden');
@@ -158,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fixBrokenImages();
   loadCategories();
+  detectAndSetUserCity();
 
   if (searchInput) searchInput.addEventListener('change', executeSearch);
   if (radiusSelect) radiusSelect.addEventListener('change', executeSearch);
