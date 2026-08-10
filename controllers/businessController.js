@@ -1,15 +1,15 @@
 const db = require('../config/db');
 
-function calculateDistanceMiles(lat1, lon1, lat2, lon2) {
-  const R = 3958.8; // Radius of the Earth in miles
+// Haversine formula to compute distance in miles
+function getDistanceMiles(lat1, lon1, lat2, lon2) {
+  const R = 3958.8;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
 const CITY_COORDS = {
@@ -18,28 +18,8 @@ const CITY_COORDS = {
   'newcastle upon tyne': { lat: 54.9783, lon: -1.6178 },
   'london': { lat: 51.5074, lon: -0.1278 },
   'manchester': { lat: 53.4808, lon: -2.2426 },
-  'birmingham': { lat: 52.4862, lon: -1.8904 },
-  'leeds': { lat: 53.8008, lon: -1.5491 }
+  'birmingham': { lat: 52.4862, lon: -1.8904 }
 };
-
-async function geocodeAddress(location) {
-  const key = location.trim().toLowerCase();
-  if (CITY_COORDS[key]) return CITY_COORDS[key];
-
-  try {
-    const fetch = (await import('node-fetch')).default;
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`, {
-      headers: { 'User-Agent': 'HabeshatieApp/1.0' }
-    });
-    const data = await res.json();
-    if (data && data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-    }
-  } catch (err) {
-    console.error('Geocoding API lookup error:', err);
-  }
-  return null;
-}
 
 const apiSearch = async (req, res) => {
   const q = (req.query.q || '').trim();
@@ -47,14 +27,6 @@ const apiSearch = async (req, res) => {
   let userLat = parseFloat(req.query.lat);
   let userLon = parseFloat(req.query.lon);
   const radius = parseFloat(req.query.radius) || 25;
-
-  if ((isNaN(userLat) || isNaN(userLon)) && where) {
-    const coords = await geocodeAddress(where);
-    if (coords) {
-      userLat = coords.lat;
-      userLon = coords.lon;
-    }
-  }
 
   let sql = 'SELECT * FROM businesses WHERE 1=1';
   let params = [];
@@ -70,29 +42,30 @@ const apiSearch = async (req, res) => {
 
     let results = rows || [];
 
+    // Filter strictly by distance if coordinates exist
     if (!isNaN(userLat) && !isNaN(userLon)) {
       results = results.filter(b => {
         let bLat = parseFloat(b.latitude);
         let bLon = parseFloat(b.longitude);
 
         if ((isNaN(bLat) || isNaN(bLon)) && b.city) {
-          const key = b.city.trim().toLowerCase();
-          if (CITY_COORDS[key]) {
-            bLat = CITY_COORDS[key].lat;
-            bLon = CITY_COORDS[key].lon;
+          const cityKey = b.city.trim().toLowerCase();
+          if (CITY_COORDS[cityKey]) {
+            bLat = CITY_COORDS[cityKey].lat;
+            bLon = CITY_COORDS[cityKey].lon;
           }
         }
 
         if (isNaN(bLat) || isNaN(bLon)) return false;
 
-        const dist = calculateDistanceMiles(userLat, userLon, bLat, bLon);
+        const dist = getDistanceMiles(userLat, userLon, bLat, bLon);
         b.distance = dist;
         return dist <= radius;
       });
 
       results.sort((a, b) => a.distance - b.distance);
     } else if (where) {
-      results = results.filter(b => b.city && b.city.toLowerCase().includes(where.toLowerCase()));
+      results = results.filter(b => b.city && b.city.toLowerCase().trim() === where.toLowerCase().trim());
     }
 
     res.json({ results });
