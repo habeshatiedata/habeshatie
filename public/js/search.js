@@ -47,11 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
   async function executeSearch() {
     const q = searchInput ? searchInput.value.trim() : '';
     const where = locationInput ? locationInput.value.trim() : '';
+    const radius = radiusSelect ? radiusSelect.value : '10';
 
     try {
       const params = new URLSearchParams();
       if (q) params.append('q', q);
       if (where) params.append('where', where);
+      if (radius) params.append('radius', radius);
 
       const res = await fetch('/api/search?' + params.toString());
       if (res.ok) {
@@ -111,11 +113,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
-          const res = await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lon);
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
           const data = await res.json();
-          const city = data.address.city || data.address.town || data.address.village || data.address.county || '';
-          if (locationInput && city) {
-            locationInput.value = city;
+          const addr = data.address || {};
+          const detectedCity = addr.city || addr.town || addr.village || addr.suburb || addr.county || '';
+          
+          if (locationInput && detectedCity) {
+            locationInput.value = detectedCity;
           }
           executeSearch();
         } catch (err) {
@@ -126,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       (err) => {
         if (locateBtn) locateBtn.textContent = 'GPS';
-        alert('Unable to retrieve location. Please check browser permissions.');
+        alert('Location permission denied or unavailable.');
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
@@ -136,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fixBrokenImages();
   loadCategories();
 
-  // Event Listeners
+  // Instant Navigation Listeners (No Search Button Needed)
   if (searchForm) {
     searchForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -145,14 +149,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (searchInput) searchInput.addEventListener('change', executeSearch);
+  
   if (locationInput) {
-    locationInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        executeSearch();
-      }
+    let timeout = null;
+    locationInput.addEventListener('input', () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(executeSearch, 300);
     });
   }
+
+  if (radiusSelect) radiusSelect.addEventListener('change', executeSearch);
 
   if (locateBtn) {
     locateBtn.type = 'button';

@@ -117,7 +117,7 @@ exports.getCategories = (req, res) => {
   }
 };
 
-// Real-time API Search (Handles category, location tokens, and return results)
+// Real-time API Search
 exports.apiSearch = (req, res) => {
   const q = (req.query.q || req.query.search || '').trim();
   const where = (req.query.where || req.query.location || '').trim();
@@ -125,22 +125,22 @@ exports.apiSearch = (req, res) => {
   let query = 'SELECT * FROM businesses WHERE 1=1';
   let params = [];
 
-  // Filter by category or search term
+  // Filter by category or keyword search term
   if (q && q !== 'All Businesses & Services') {
     query += ' AND (name LIKE ? OR category LIKE ? OR description LIKE ?)';
     const term = `%${q}%`;
     params.push(term, term, term);
   }
 
-  // Flexible location search (splits "Newcastle upon Tyne" into individual keywords)
+  // Location search: query valid columns (city, country, description, name)
   if (where) {
     const words = where.split(/\s+/).filter(w => w.length > 2);
     if (words.length > 0) {
-      const locationConditions = words.map(() => '(city LIKE ? OR address LIKE ? OR country LIKE ?)').join(' OR ');
+      const locationConditions = words.map(() => '(city LIKE ? OR country LIKE ? OR name LIKE ? OR description LIKE ?)').join(' OR ');
       query += ` AND (${locationConditions})`;
       words.forEach(word => {
         const term = `%${word}%`;
-        params.push(term, term, term);
+        params.push(term, term, term, term);
       });
     }
   }
