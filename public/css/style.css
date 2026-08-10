@@ -546,3 +546,174 @@ select.search-select-field {
   background-color: #f1f5f9;
   color: #0f172a;
 }
+
+/* Fix mobile search bar layout & text clipping */
+.search-radius-wrapper select,
+.search-select-field {
+  padding-right: 28px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .search-single-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .input-wrapper {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .search-radius-wrapper select {
+    font-size: 0.95rem !important;
+    padding-left: 14px !important;
+  }
+}
+
+/* Keep Location & Radius side-by-side on mobile without clipping */
+@media (max-width: 640px) {
+  .search-secondary-row,
+  .search-location-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  /* Give input 58% and radius dropdown 42% of available width */
+  .search-location-group > *:first-child {
+    flex: 1.3 1 0% !important;
+    min-width: 0 !important;
+  }
+
+  .search-radius-wrapper {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+  }
+
+  /* Compact padding so text & arrow fit easily */
+  .search-radius-wrapper select,
+  .search-location-group input {
+    font-size: 0.85rem !important;
+    padding-left: 10px !important;
+    padding-right: 22px !important;
+  }
+}
+
+/* Left-align radius dropdown text and fix padding clipping */
+#radiusSelect,
+.search-radius-wrapper select {
+  text-align: left !important;
+  text-align-last: left !important; /* Forces iOS Safari to left-align select options */
+  padding-left: 12px !important;
+  padding-right: 24px !important;
+}
+
+@media (max-width: 640px) {
+  #radiusSelect,
+  .search-radius-wrapper select {
+    font-size: 0.85rem !important;
+    padding-left: 8px !important;
+    padding-right: 20px !important;
+  }
+}
+
+/* Force location and radius side-by-side on a single row without wrapping */
+.search-location-group,
+.search-row-split,
+div:has(> #locationInput) {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  width: 100% !important;
+  gap: 8px !important;
+}
+
+/* Ensure child elements take appropriate widths without wrapping */
+.search-location-group > input,
+#locationInput,
+.location-field {
+  flex: 1 1 55% !important;
+  min-width: 0 !important;
+  width: 55% !important;
+}
+
+.search-location-group > select,
+#radiusSelect,
+.radius-field {
+  flex: 1 1 45% !important;
+  min-width: 0 !important;
+  width: 45% !important;
+  white-space: nowrap !important;
+  text-align: left !important;
+  text-align-last: left !important;
+}
+
+@media (max-width: 640px) {
+  #locationInput,
+  #radiusSelect {
+    font-size: 0.82rem !important;
+    padding-left: 8px !important;
+    padding-right: 18px !important;
+    height: 42px !important;
+  }
+}
+
+/* Grouping container */
+.search-form-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+/* Force Row 2 to stay horizontal on ALL screens */
+.search-row-inline {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.search-row-inline .search-where-wrapper {
+  flex: 1.3 1 0% !important;
+  min-width: 0 !important;
+  position: relative !important;
+}
+
+.search-row-inline .search-radius-wrapper {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+}
+
+/* Fix icon overlapping Sunderland text */
+.search-where-wrapper .input-icon {
+  position: absolute !important;
+  left: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+}
+
+.search-where-wrapper input#locationInput {
+  padding-left: 38px !important; /* Move text past the pin icon */
+  padding-right: 8px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Format radius select text */
+.search-radius-wrapper select#radiusSelect {
+  padding-left: 10px !important;
+  padding-right: 20px !important;
+  text-align: left !important;
+  text-align-last: left !important;
+  white-space: nowrap !important;
+}
