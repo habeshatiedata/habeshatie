@@ -41,7 +41,7 @@ exports.getDirectory = (req, res) => {
   });
 };
 
-// View Single Business Page (Triggers Analytics)
+// View Single Business Page
 exports.getBusinessBySlug = (req, res) => {
   const { slug } = req.params;
 
@@ -50,10 +50,8 @@ exports.getBusinessBySlug = (req, res) => {
       return res.status(404).render('404', { message: 'Business not found' });
     }
 
-    // Update View Analytics
     db.run('UPDATE analytics SET views_count = views_count + 1 WHERE business_id = ?', [business.id]);
 
-    // Fetch Reviews
     db.all(
       'SELECT * FROM reviews WHERE business_id = ? ORDER BY created_at DESC',
       [business.id],
@@ -90,12 +88,10 @@ exports.addReview = (req, res) => {
   });
 };
 
-// Dynamic Categories Endpoint Handler for SQLite
+// Dynamic Categories Endpoint Handler
 exports.getCategories = (req, res) => {
   try {
-    const db = require('../config/db');
     const { where } = req.query;
-
     let query = `SELECT DISTINCT category FROM businesses WHERE category IS NOT NULL AND category != ''`;
     let params = [];
 
@@ -119,4 +115,43 @@ exports.getCategories = (req, res) => {
     console.error('Server error fetching categories:', error);
     res.status(500).json({ categories: [] });
   }
+};
+
+// Real-time API Search (Handles category, location tokens, and return results)
+exports.apiSearch = (req, res) => {
+  const q = (req.query.q || req.query.search || '').trim();
+  const where = (req.query.where || req.query.location || '').trim();
+
+  let query = 'SELECT * FROM businesses WHERE 1=1';
+  let params = [];
+
+  // Filter by category or search term
+  if (q && q !== 'All Businesses & Services') {
+    query += ' AND (name LIKE ? OR category LIKE ? OR description LIKE ?)';
+    const term = `%${q}%`;
+    params.push(term, term, term);
+  }
+
+  // Flexible location search (splits "Newcastle upon Tyne" into individual keywords)
+  if (where) {
+    const words = where.split(/\s+/).filter(w => w.length > 2);
+    if (words.length > 0) {
+      const locationConditions = words.map(() => '(city LIKE ? OR address LIKE ? OR country LIKE ?)').join(' OR ');
+      query += ` AND (${locationConditions})`;
+      words.forEach(word => {
+        const term = `%${word}%`;
+        params.push(term, term, term);
+      });
+    }
+  }
+
+  query += ' ORDER BY is_featured DESC, created_at DESC LIMIT 50';
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error('Search API Error:', err);
+      return res.status(500).json({ results: [] });
+    }
+    res.json({ results: rows || [] });
+  });
 };

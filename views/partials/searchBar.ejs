@@ -1,6 +1,5 @@
 <div class="search-hero-box">
-  <form id="searchForm" class="search-single-row" action="/search" method="GET" onsubmit="return false;">
-    
+  <form id="searchForm" class="search-single-row">
     <!-- 1. Category Field -->
     <div class="input-wrapper search-what-wrapper">
       <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -18,7 +17,7 @@
         <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path>
         <circle cx="12" cy="10" r="3"></circle>
       </svg>
-      <input type="text" id="locationInput" name="where" class="search-input-field" placeholder="City or postcode" value="Sunderland">
+      <input type="text" id="locationInput" name="where" class="search-input-field" placeholder="City or postcode" value="">
       <button type="button" id="locateBtn" class="locate-btn">GPS</button>
     </div>
 
@@ -32,6 +31,8 @@
       </select>
     </div>
 
+    <!-- 4. Submit Button -->
+    <button type="submit" class="btn-search" style="padding: 0.75rem 1.25rem; background: var(--primary, #0f172a); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Search</button>
   </form>
   <div id="searchResults" class="search-results-dropdown hidden"></div>
 </div>
