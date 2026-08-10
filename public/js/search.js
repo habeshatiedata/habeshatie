@@ -1,10 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const searchForm = document.getElementById('searchForm');
   const searchInput = document.getElementById('searchInput');
   const locationInput = document.getElementById('locationInput');
   const radiusSelect = document.getElementById('radiusSelect');
   const locateBtn = document.getElementById('locateBtn');
   const cardGrid = document.querySelector('.grid');
+
+  let currentLat = null;
+  let currentLon = null;
 
   function applyPlaceholder(img) {
     if (img.dataset.fallbackApplied) return;
@@ -54,6 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q) params.append('q', q);
       if (where) params.append('where', where);
       if (radius) params.append('radius', radius);
+      if (currentLat && currentLon) {
+        params.append('lat', currentLat);
+        params.append('lon', currentLon);
+      }
 
       const res = await fetch('/api/search?' + params.toString());
       if (res.ok) {
@@ -98,22 +104,18 @@ document.addEventListener('DOMContentLoaded', () => {
     fixBrokenImages(cardGrid);
   }
 
-  function handleGPS(e) {
-    if (e) e.preventDefault();
-
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
+  function fetchGPSLocation() {
+    if (!navigator.geolocation) return;
 
     if (locateBtn) locateBtn.textContent = '...';
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+          currentLat = pos.coords.latitude;
+          currentLon = pos.coords.longitude;
+
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`);
           const data = await res.json();
           const addr = data.address || {};
           const detectedCity = addr.city || addr.town || addr.village || addr.suburb || addr.county || '';
@@ -123,36 +125,31 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           executeSearch();
         } catch (err) {
-          console.error('GPS Geocode error:', err);
+          console.error('GPS error:', err);
         } finally {
           if (locateBtn) locateBtn.textContent = 'GPS';
         }
       },
-      (err) => {
+      () => {
         if (locateBtn) locateBtn.textContent = 'GPS';
-        alert('Location permission denied or unavailable.');
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
   }
 
-  // Initial load
+  // Auto-run on initialization
   fixBrokenImages();
   loadCategories();
+  fetchGPSLocation(); // Auto detects user city on page load
 
-  // Instant Navigation Listeners (No Search Button Needed)
-  if (searchForm) {
-    searchForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      executeSearch();
-    });
-  }
-
+  // Real-time event triggers
   if (searchInput) searchInput.addEventListener('change', executeSearch);
   
   if (locationInput) {
     let timeout = null;
     locationInput.addEventListener('input', () => {
+      currentLat = null;
+      currentLon = null;
       clearTimeout(timeout);
       timeout = setTimeout(executeSearch, 300);
     });
@@ -162,6 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (locateBtn) {
     locateBtn.type = 'button';
-    locateBtn.onclick = handleGPS;
+    locateBtn.onclick = fetchGPSLocation;
   }
 });
