@@ -1,6 +1,6 @@
 <div class="search-hero-box">
-  <form id="searchForm" class="search-single-row" onsubmit="return false;">
-    <!-- 1. Category Field -->
+  <form id="searchForm" class="search-single-row" onsubmit="return false;" autocomplete="off">
+    <!-- Category -->
     <div class="input-wrapper search-what-wrapper">
       <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"></circle>
@@ -11,17 +11,17 @@
       </select>
     </div>
 
-    <!-- 2. Location Input & GPS Button -->
-    <div class="input-wrapper search-where-wrapper">
+    <!-- Location & Autocomplete -->
+    <div class="input-wrapper search-where-wrapper" style="position: relative;">
       <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path>
         <circle cx="12" cy="10" r="3"></circle>
       </svg>
-      <input type="text" id="locationInput" name="where" class="search-input-field" placeholder="City or postcode" value="">
-      <button type="button" id="locateBtn" class="locate-btn">GPS</button>
+      <input type="text" id="locationInput" name="where" class="search-input-field" placeholder="City or postcode" value="" autocomplete="off">
+      <div id="cityDropdown" class="city-autocomplete-dropdown hidden"></div>
     </div>
 
-    <!-- 3. Radius Field -->
+    <!-- Radius -->
     <div class="input-wrapper search-radius-wrapper">
       <select id="radiusSelect" name="radius" class="search-select-field">
         <option value="5">Within 5 mi</option>
@@ -31,7 +31,6 @@
       </select>
     </div>
   </form>
-  <div id="searchResults" class="search-results-dropdown hidden"></div>
 </div>
 
-<script src="/js/search.js?v=20260810"></script>
+<script src="/js/search.js?v=20260810_v3"></script>

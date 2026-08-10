@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('searchInput');
   const locationInput = document.getElementById('locationInput');
+  const cityDropdown = document.getElementById('cityDropdown');
   const radiusSelect = document.getElementById('radiusSelect');
-  const locateBtn = document.getElementById('locateBtn');
   const cardGrid = document.querySelector('.grid');
 
   let currentLat = null;
@@ -56,10 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q) params.append('q', q);
       if (where) params.append('where', where);
       if (radius) params.append('radius', radius);
-      if (currentLat && currentLon) {
-        params.append('lat', currentLat);
-        params.append('lon', currentLon);
-      }
 
       const res = await fetch('/api/search?' + params.toString());
       if (res.ok) {
@@ -104,61 +100,65 @@ document.addEventListener('DOMContentLoaded', () => {
     fixBrokenImages(cardGrid);
   }
 
-  function fetchGPSLocation() {
-    if (!navigator.geolocation) return;
-
-    if (locateBtn) locateBtn.textContent = '...';
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          currentLat = pos.coords.latitude;
-          currentLon = pos.coords.longitude;
-
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`);
-          const data = await res.json();
-          const addr = data.address || {};
-          const detectedCity = addr.city || addr.town || addr.village || addr.suburb || addr.county || '';
-          
-          if (locationInput && detectedCity) {
-            locationInput.value = detectedCity;
-          }
-          executeSearch();
-        } catch (err) {
-          console.error('GPS error:', err);
-        } finally {
-          if (locateBtn) locateBtn.textContent = 'GPS';
-        }
-      },
-      () => {
-        if (locateBtn) locateBtn.textContent = 'GPS';
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
-  }
-
-  // Auto-run on initialization
-  fixBrokenImages();
-  loadCategories();
-  fetchGPSLocation(); // Auto detects user city on page load
-
-  // Real-time event triggers
-  if (searchInput) searchInput.addEventListener('change', executeSearch);
-  
+  // Handle typing suggestions
+  let cityDebounce = null;
   if (locationInput) {
-    let timeout = null;
     locationInput.addEventListener('input', () => {
-      currentLat = null;
-      currentLon = null;
-      clearTimeout(timeout);
-      timeout = setTimeout(executeSearch, 300);
+      const val = locationInput.value.trim();
+
+      clearTimeout(cityDebounce);
+
+      if (val.length < 1) {
+        if (cityDropdown) cityDropdown.classList.add('hidden');
+        executeSearch();
+        return;
+      }
+
+      cityDebounce = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/cities?q=${encodeURIComponent(val)}`);
+          if (res.ok) {
+            const data = await res.json();
+            const cities = data.cities || [];
+
+            if (cityDropdown) {
+              cityDropdown.innerHTML = '';
+              if (cities.length > 0) {
+                cities.forEach(cityName => {
+                  const item = document.createElement('div');
+                  item.className = 'city-item';
+                  item.textContent = cityName;
+                  item.addEventListener('click', () => {
+                    locationInput.value = cityName;
+                    cityDropdown.classList.add('hidden');
+                    executeSearch();
+                  });
+                  cityDropdown.appendChild(item);
+                });
+                cityDropdown.classList.remove('hidden');
+              } else {
+                cityDropdown.classList.add('hidden');
+              }
+            }
+          }
+        } catch (err) {
+          console.error('City autocomplete fetch error:', err);
+        }
+        executeSearch();
+      }, 250);
     });
   }
 
-  if (radiusSelect) radiusSelect.addEventListener('change', executeSearch);
+  // Hide dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (cityDropdown && locationInput && !locationInput.contains(e.target) && !cityDropdown.contains(e.target)) {
+      cityDropdown.classList.add('hidden');
+    }
+  });
 
-  if (locateBtn) {
-    locateBtn.type = 'button';
-    locateBtn.onclick = fetchGPSLocation;
-  }
+  fixBrokenImages();
+  loadCategories();
+
+  if (searchInput) searchInput.addEventListener('change', executeSearch);
+  if (radiusSelect) radiusSelect.addEventListener('change', executeSearch);
 });

@@ -1,8 +1,7 @@
 const db = require('../config/db');
 
-// Helper: Haversine distance in miles between two lat/lon points
 function getDistanceInMiles(lat1, lon1, lat2, lon2) {
-  const R = 3958.8; // Radius of Earth in miles
+  const R = 3958.8;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =
@@ -13,7 +12,6 @@ function getDistanceInMiles(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// Approximate UK City Coordinates Map for fallback distance filtering
 const cityCoords = {
   'sunderland': { lat: 54.9069, lon: -1.3811 },
   'newcastle': { lat: 54.9783, lon: -1.6178 },
@@ -25,7 +23,7 @@ const cityCoords = {
   'edinburgh': { lat: 55.9533, lon: -3.1883 }
 };
 
-exports.getDirectory = (req, res) => {
+const getDirectory = (req, res) => {
   const { search, category, country } = req.query;
   let query = 'SELECT * FROM businesses WHERE 1=1';
   let params = [];
@@ -54,7 +52,7 @@ exports.getDirectory = (req, res) => {
   });
 };
 
-exports.getCategories = (req, res) => {
+const getCategories = (req, res) => {
   try {
     const query = `SELECT DISTINCT category FROM businesses WHERE category IS NOT NULL AND category != '' ORDER BY category ASC`;
     db.all(query, [], (err, rows) => {
@@ -67,7 +65,19 @@ exports.getCategories = (req, res) => {
   }
 };
 
-exports.apiSearch = (req, res) => {
+const getCities = (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ cities: [] });
+
+  const query = `SELECT DISTINCT city FROM businesses WHERE city LIKE ? AND city IS NOT NULL AND city != '' LIMIT 8`;
+  db.all(query, [`${q}%`], (err, rows) => {
+    if (err) return res.status(500).json({ cities: [] });
+    const cities = rows ? rows.map(r => r.city) : [];
+    res.json({ cities });
+  });
+};
+
+const apiSearch = (req, res) => {
   const q = (req.query.q || req.query.search || '').trim();
   const where = (req.query.where || req.query.location || '').trim().toLowerCase();
   const userLat = parseFloat(req.query.lat);
@@ -90,12 +100,9 @@ exports.apiSearch = (req, res) => {
     }
 
     let results = rows || [];
-
-    // Geographical distance calculation
     let targetLat = userLat;
     let targetLon = userLon;
 
-    // Check if location text matches known city coordinates
     if ((isNaN(targetLat) || isNaN(targetLon)) && where) {
       for (const [city, coords] of Object.entries(cityCoords)) {
         if (where.includes(city)) {
@@ -106,13 +113,11 @@ exports.apiSearch = (req, res) => {
       }
     }
 
-    // If target coordinates are determined, filter by mile radius
     if (!isNaN(targetLat) && !isNaN(targetLon)) {
       results = results.filter(b => {
         let bLat = parseFloat(b.latitude);
         let bLon = parseFloat(b.longitude);
 
-        // Fallback to city map if individual business lat/lon is empty
         if ((isNaN(bLat) || isNaN(bLon)) && b.city) {
           const cityKey = b.city.trim().toLowerCase();
           if (cityCoords[cityKey]) {
@@ -121,13 +126,12 @@ exports.apiSearch = (req, res) => {
           }
         }
 
-        if (isNaN(bLat) || isNaN(bLon)) return true; // Keep if no location data
+        if (isNaN(bLat) || isNaN(bLon)) return true;
 
         const distance = getDistanceInMiles(targetLat, targetLon, bLat, bLon);
         return distance <= maxRadius;
       });
     } else if (where) {
-      // Fallback keyword search if coordinates aren't resolved
       results = results.filter(b => 
         (b.city && b.city.toLowerCase().includes(where)) ||
         (b.country && b.country.toLowerCase().includes(where)) ||
@@ -137,4 +141,11 @@ exports.apiSearch = (req, res) => {
 
     res.json({ results });
   });
+};
+
+module.exports = {
+  getDirectory,
+  getCategories,
+  getCities,
+  apiSearch
 };

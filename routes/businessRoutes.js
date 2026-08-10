@@ -2,14 +2,20 @@ const express = require('express');
 const router = express.Router();
 const businessController = require('../controllers/businessController');
 
-// Page routes
-router.get('/', businessController.getDirectory);
-router.get('/b/:slug', businessController.getBusinessBySlug);
-router.post('/b/:slug/review', businessController.addReview);
+if (typeof businessController.getDirectory === 'function') {
+  router.get('/', businessController.getDirectory);
+}
 
-// API routes
-router.post('/api/track-whatsapp/:id', businessController.trackWhatsAppClick);
-router.get('/api/categories', businessController.getCategories);
-router.get('/api/search', businessController.apiSearch);
+if (typeof businessController.getCategories === 'function') {
+  router.get('/api/categories', businessController.getCategories);
+}
+
+if (typeof businessController.getCities === 'function') {
+  router.get('/api/cities', businessController.getCities);
+}
+
+if (typeof businessController.apiSearch === 'function') {
+  router.get('/api/search', businessController.apiSearch);
+}
 
 module.exports = router;
