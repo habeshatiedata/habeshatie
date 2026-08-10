@@ -280,3 +280,232 @@ footer {
   color: #d97706 !important;
   font-weight: 800 !important;
 }
+
+/* Offset text inside search input/select to prevent overlap with the absolute icon */
+#searchInput, 
+select#searchInput {
+  padding-left: 2.5rem !important;
+}
+
+/* Search Hero Box & Horizontal Form Layout */
+.search-hero-box {
+  position: relative !important;
+  width: 90% !important;
+  max-width: 850px !important;
+  margin: 2rem auto !important;
+  padding: 1rem 1.25rem !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08) !important;
+}
+
+.search-single-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.input-wrapper {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.search-what-wrapper { flex: 2 1 260px !important; }
+.search-where-wrapper { flex: 2 1 220px !important; }
+.search-radius-wrapper { flex: 1 1 120px !important; }
+
+.search-select-field,
+.search-input-field {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 48px !important;
+  padding: 0 12px 0 38px !important;
+  background-color: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  color: #0f172a !important;
+  font-size: 0.95rem !important;
+  outline: none !important;
+}
+
+select.search-select-field {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 14px !important;
+  padding-right: 32px !important;
+}
+
+.input-wrapper .input-icon {
+  position: absolute !important;
+  left: 12px !important;
+  z-index: 5 !important;
+  pointer-events: none !important;
+}
+
+.search-where-wrapper .locate-btn {
+  position: absolute !important;
+  right: 6px !important;
+  padding: 4px 8px !important;
+  background-color: #e2e8f0 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #d97706 !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  cursor: pointer !important;
+}
+
+/* Force single row horizontal alignment for all 3 search inputs */
+.search-single-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Ensure wrappers don't wrap internally or take 100% block width */
+.search-hero-box form,
+.search-hero-box .search-single-row > div {
+  margin: 0 !important;
+}
+
+.search-what-wrapper {
+  flex: 2 1 40% !important;
+  width: auto !important;
+}
+
+.search-where-wrapper {
+  flex: 2 1 35% !important;
+  width: auto !important;
+}
+
+.search-radius-wrapper {
+  flex: 1 1 25% !important;
+  width: auto !important;
+}
+
+/* Force 3-column single row layout */
+.search-hero-box {
+  position: relative !important;
+  width: 90% !important;
+  max-width: 900px !important;
+  margin: 2rem auto !important;
+  padding: 12px 16px !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08) !important;
+}
+
+form.search-single-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.search-single-row > .input-wrapper {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+}
+
+.search-what-wrapper { flex: 2 1 35% !important; }
+.search-where-wrapper { flex: 2 1 35% !important; }
+.search-radius-wrapper { flex: 1 1 25% !important; }
+
+.search-select-field,
+.search-input-field {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 48px !important;
+  padding: 0 12px 0 38px !important;
+  background-color: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  color: #0f172a !important;
+  font-size: 0.95rem !important;
+  outline: none !important;
+}
+
+select.search-select-field {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 14px !important;
+  padding-right: 32px !important;
+}
+
+.input-wrapper .input-icon {
+  position: absolute !important;
+  left: 12px !important;
+  z-index: 5 !important;
+  pointer-events: none !important;
+}
+
+.search-where-wrapper .locate-btn {
+  position: absolute !important;
+  right: 6px !important;
+  padding: 4px 8px !important;
+  background-color: #e2e8f0 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #d97706 !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  cursor: pointer !important;
+}
+
+/* Mobile responsive layout for search bar */
+@media screen and (max-width: 768px) {
+  .search-hero-box {
+    width: 92% !important;
+    padding: 12px !important;
+    margin: 1rem auto !important;
+  }
+
+  form.search-single-row {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+
+  /* Category dropdown takes full width on top */
+  .search-what-wrapper {
+    flex: 1 0 100% !important;
+    width: 100% !important;
+  }
+
+  /* City and distance sit side-by-side underneath */
+  .search-where-wrapper {
+    flex: 1 1 calc(60% - 5px) !important;
+    width: auto !important;
+  }
+
+  .search-radius-wrapper {
+    flex: 1 1 calc(40% - 5px) !important;
+    width: auto !important;
+  }
+
+  .search-select-field,
+  .search-input-field {
+    height: 44px !important;
+    font-size: 0.88rem !important;
+  }
+}

@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const User = require('../models/User'); // Adjust path if your User model location differs
+const db = require('../config/db');
 
 // Render Registration Page
 exports.getRegister = (req, res) => {
@@ -10,6 +10,7 @@ exports.getRegister = (req, res) => {
 exports.postRegister = async (req, res) => {
   try {
     const { email, password, confirmPassword } = req.body;
+    const cleanEmail = email.toLowerCase().trim();
 
     // 1. Check if passwords match
     if (password !== confirmPassword) {
@@ -31,31 +32,36 @@ exports.postRegister = async (req, res) => {
       return res.render('register', { error: 'Password must contain at least one number.' });
     }
 
-    // 5. Check if user already exists -> prompt to log in
-    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
-    if (existingUser) {
-      return res.render('register', { 
-        error: 'An account with that email already exists. Please login instead.' 
-      });
-    }
+    // Check if user already exists
+    db.get('SELECT * FROM users WHERE email = ?', [cleanEmail], async (err, existingUser) => {
+      if (err) {
+        console.error('Database Error:', err);
+        return res.render('register', { error: 'Database error occurred.' });
+      }
 
-    // Hash password and save new user
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
-      email: email.toLowerCase().trim(),
-      password: hashedPassword
+      if (existingUser) {
+        return res.render('register', { 
+          error: 'An account with that email already exists. Please login instead.' 
+        });
+      }
+
+      // Hash password and insert user
+      const hashedPassword = await bcrypt.hash(password, 10);
+      db.run('INSERT INTO users (email, password) VALUES (?, ?)', [cleanEmail, hashedPassword], function(err) {
+        if (err) {
+          console.error('User Insert Error:', err);
+          return res.render('register', { error: 'Could not create account.' });
+        }
+
+        req.session.userId = this.lastID;
+        req.session.userEmail = cleanEmail;
+        res.redirect('/dashboard');
+      });
     });
 
-    await newUser.save();
-
-    // Auto log-in after registration
-    req.session.userId = newUser._id;
-    req.session.userEmail = newUser.email;
-
-    res.redirect('/dashboard');
   } catch (err) {
     console.error('Registration Error:', err);
-    res.render('register', { error: 'An error occurred during registration. Please try again.' });
+    res.render('register', { error: 'An error occurred during registration.' });
   }
 };
 
@@ -65,27 +71,28 @@ exports.getLogin = (req, res) => {
 };
 
 // Process Login
-exports.postLogin = async (req, res) => {
+exports.postLogin = (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const cleanEmail = email.toLowerCase().trim();
 
-    if (!user) {
-      return res.render('login', { error: 'Invalid email or password.' });
-    }
+    db.get('SELECT * FROM users WHERE email = ?', [cleanEmail], async (err, user) => {
+      if (err || !user) {
+        return res.render('login', { error: 'Invalid email or password.' });
+      }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.render('login', { error: 'Invalid email or password.' });
-    }
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.render('login', { error: 'Invalid email or password.' });
+      }
 
-    req.session.userId = user._id;
-    req.session.userEmail = user.email;
-
-    res.redirect('/dashboard');
+      req.session.userId = user.id;
+      req.session.userEmail = user.email;
+      res.redirect('/dashboard');
+    });
   } catch (err) {
     console.error('Login Error:', err);
-    res.render('login', { error: 'An error occurred during login. Please try again.' });
+    res.render('login', { error: 'An error occurred during login.' });
   }
 };
 

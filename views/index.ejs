@@ -9,17 +9,8 @@
       Connect directly with <span class="highlight-orange">verified</span> Habesha businesses near you.
     </p>
 
-    <!-- Search Form -->
-    <form action="/" method="GET" class="search-form">
-      <input 
-        type="text" 
-        name="search" 
-        value="<%= search || '' %>" 
-        placeholder="Search restaurant, catering, legal..." 
-        class="search-input"
-      />
-      <button type="submit" class="btn-cta search-btn">Search</button>
-    </form>
+    <!-- Unified Real-Time Search Bar -->
+    <%- include('partials/searchBar') %>
   </section>
 
   <!-- Business Cards Grid -->
@@ -49,3 +40,5 @@
 </main>
 
 <%- include('partials/footer') %>
+
+<script src="/js/search.js"></script>

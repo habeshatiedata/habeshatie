@@ -89,3 +89,34 @@ exports.addReview = (req, res) => {
     );
   });
 };
+
+// Dynamic Categories Endpoint Handler for SQLite
+exports.getCategories = (req, res) => {
+  try {
+    const db = require('../config/db');
+    const { where } = req.query;
+
+    let query = `SELECT DISTINCT category FROM businesses WHERE category IS NOT NULL AND category != ''`;
+    let params = [];
+
+    if (where && where.trim() !== '') {
+      query += ` AND LOWER(city) = LOWER(?)`;
+      params.push(where.trim());
+    }
+
+    query += ` ORDER BY category ASC`;
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching categories from SQLite:', err);
+        return res.status(500).json({ categories: [] });
+      }
+
+      const categories = rows ? rows.map(row => row.category) : [];
+      res.json({ categories });
+    });
+  } catch (error) {
+    console.error('Server error fetching categories:', error);
+    res.status(500).json({ categories: [] });
+  }
+};
