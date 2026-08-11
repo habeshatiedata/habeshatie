@@ -1,93 +1,59 @@
 const db = require('../config/db');
 
-// Haversine formula to compute distance in miles
-function getDistanceMiles(lat1, lon1, lat2, lon2) {
-  const R = 3958.8;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-}
-
-const CITY_COORDS = {
-  'sunderland': { lat: 54.9069, lon: -1.3811 },
-  'newcastle': { lat: 54.9783, lon: -1.6178 },
-  'newcastle upon tyne': { lat: 54.9783, lon: -1.6178 },
-  'london': { lat: 51.5074, lon: -0.1278 },
-  'manchester': { lat: 53.4808, lon: -2.2426 },
-  'birmingham': { lat: 52.4862, lon: -1.8904 }
-};
-
-const apiSearch = async (req, res) => {
-  const q = (req.query.q || '').trim();
-  const where = (req.query.where || '').trim();
-  let userLat = parseFloat(req.query.lat);
-  let userLon = parseFloat(req.query.lon);
-  const radius = parseFloat(req.query.radius) || 25;
-
-  let sql = 'SELECT * FROM businesses WHERE 1=1';
-  let params = [];
-
-  if (q && q !== 'All Businesses & Services') {
-    sql += ' AND (category LIKE ? OR name LIKE ? OR description LIKE ?)';
-    const term = `%${q}%`;
-    params.push(term, term, term);
-  }
-
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ results: [] });
-
-    let results = rows || [];
-
-    // Filter strictly by distance if coordinates exist
-    if (!isNaN(userLat) && !isNaN(userLon)) {
-      results = results.filter(b => {
-        let bLat = parseFloat(b.latitude);
-        let bLon = parseFloat(b.longitude);
-
-        if ((isNaN(bLat) || isNaN(bLon)) && b.city) {
-          const cityKey = b.city.trim().toLowerCase();
-          if (CITY_COORDS[cityKey]) {
-            bLat = CITY_COORDS[cityKey].lat;
-            bLon = CITY_COORDS[cityKey].lon;
-          }
-        }
-
-        if (isNaN(bLat) || isNaN(bLon)) return false;
-
-        const dist = getDistanceMiles(userLat, userLon, bLat, bLon);
-        b.distance = dist;
-        return dist <= radius;
-      });
-
-      results.sort((a, b) => a.distance - b.distance);
-    } else if (where) {
-      results = results.filter(b => b.city && b.city.toLowerCase().trim() === where.toLowerCase().trim());
-    }
-
-    res.json({ results });
-  });
-};
-
-const getDirectory = (req, res) => {
+exports.getDirectory = (req, res) => {
   db.all('SELECT * FROM businesses ORDER BY created_at DESC', [], (err, businesses) => {
     res.render('index', { businesses: businesses || [] });
   });
 };
 
-const getCategories = (req, res) => {
-  db.all('SELECT DISTINCT category FROM businesses WHERE category IS NOT NULL', [], (err, rows) => {
-    res.json({ categories: rows ? rows.map(r => r.category) : [] });
+exports.getCategories = (req, res) => {
+  db.all('SELECT DISTINCT category FROM businesses', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows.map(r => r.category));
   });
 };
 
-const getCities = (req, res) => {
-  const q = (req.query.q || '').trim();
-  db.all('SELECT DISTINCT city FROM businesses WHERE city LIKE ? AND city IS NOT NULL AND city != "" LIMIT 10', [`%${q}%`], (err, rows) => {
-    res.json({ cities: rows ? rows.map(r => r.city) : [] });
+exports.getCities = (req, res) => {
+  db.all('SELECT DISTINCT city FROM businesses', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows.map(r => r.city));
   });
 };
-module.exports = { getDirectory, getCategories, getCities, apiSearch };
+
+exports.apiSearch = (req, res) => {
+  const { q, category, city } = req.query;
+  let query = 'SELECT * FROM businesses WHERE 1=1';
+  let params = [];
+  if (category && category !== 'All') { query += ' AND category = ?'; params.push(category); }
+  if (city && city !== 'All') { query += ' AND city = ?'; params.push(city); }
+  if (q) { query += ' AND (name LIKE ? OR description LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows);
+  });
+};
+
+exports.getDashboard = (req, res) => {
+  const userId = req.session.userId;
+  db.all(`SELECT b.*, COALESCE(a.views_count, 0) as views_count, COALESCE(a.whatsapp_clicks, 0) as whatsapp_clicks FROM businesses b LEFT JOIN analytics a ON b.id = a.business_id WHERE b.user_id = ? ORDER BY b.created_at DESC`, [userId], (err, businesses) => {
+    res.render('dashboard', { businesses: businesses || [] });
+  });
+};
+
+exports.getCreateBusiness = (req, res) => {
+  res.render('business-create', { error: null });
+};
+
+exports.postCreateBusiness = (req, res) => {
+  const userId = req.session.userId;
+  const { name, category, city, country, phone, description, languages } = req.body;
+  const photo = req.file ? `/uploads/${req.file.filename}` : '/uploads/default.jpg';
+  const baseSlug = name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
+  const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+  db.run(`INSERT INTO businesses (user_id, name, slug, category, city, country, phone, description, photo, languages) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [userId, name, slug, category, city, country, phone, description, photo, languages], function (err) {
+    if (err) return res.render('business-create', { error: 'Failed to create business listing.' });
+    db.run('INSERT INTO analytics (business_id, views_count, whatsapp_clicks) VALUES (?, 0, 0)', [this.lastID], () => {
+      res.redirect('/dashboard');
+    });
+  });
+};
