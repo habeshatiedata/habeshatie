@@ -1,36 +1,81 @@
-<%- include('partials/header') %>
-<main class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <h2>Owner Dashboard</h2>
-    <a href="/dashboard/create" class="btn-cta" style="text-decoration: none;">+ Add New Business</a>
-  </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Owner Dashboard | Habeshatie</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between">
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex justify-between items-center">
+    <a href="/" class="text-xl font-bold tracking-tight text-white">Habesha<span class="text-amber-500">tie</span></a>
+    <nav class="flex items-center gap-4 text-sm font-semibold">
+      <a href="/" class="text-slate-300 hover:text-white">Explore</a>
+      <a href="/dashboard" class="text-amber-400 font-bold">Dashboard</a>
+      <a href="/logout" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition">Logout</a>
+    </nav>
+  </header>
 
-  <% if (businesses.length === 0) { %>
-    <div style="background: #fff; border: 1px solid var(--border); padding: 3rem; text-align: center; border-radius: 12px;">
-      <p style="color: #64748b;">You haven't added any businesses yet.</p>
+  <main class="max-w-5xl mx-auto px-6 py-10 w-full flex-grow">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl font-extrabold text-white tracking-tight">Owner Dashboard</h1>
+        <p class="text-slate-400 text-sm mt-1">Manage your active listings, track leads, and update business info.</p>
+      </div>
+      <a href="/dashboard/create" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2">
+        <span>+ Add New Business</span>
+      </a>
     </div>
-  <% } else { %>
-    <div class="grid">
-      <% businesses.forEach(b => { %>
-        <div class="card">
-          <div class="card-body">
-            <h3><%= b.name %></h3>
-            <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.25rem;">📍 <%= b.city %>, <%= b.country %></p>
-            <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border);" />
-            <div style="display: flex; justify-content: space-around; text-align: center;">
-              <div>
-                <strong style="font-size: 1.25rem; color: var(--primary);"><%= b.views_count %></strong>
-                <p style="font-size: 0.75rem; color: #64748b;">Views</p>
+
+    <% if (businesses && businesses.length > 0) { %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <% businesses.forEach(business => { %>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start gap-4 mb-3">
+                <h3 class="text-xl font-bold text-white"><%= business.name %></h3>
+                <span class="bg-slate-800 text-amber-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-slate-700"><%= business.category %></span>
               </div>
-              <div>
-                <strong style="font-size: 1.25rem; color: var(--whatsapp);"><%= b.whatsapp_clicks %></strong>
-                <p style="font-size: 0.75rem; color: #64748b;">WhatsApp Leads</p>
+              <p class="text-slate-400 text-sm mb-4 flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <%= business.city %>, <%= business.country %>
+              </p>
+
+              <div class="grid grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/60 mb-6">
+                <div>
+                  <span class="block text-2xl font-extrabold text-white"><%= business.views || 0 %></span>
+                  <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Profile Views</span>
+                </div>
+                <div>
+                  <span class="block text-2xl font-extrabold text-amber-400"><%= business.leads || 0 %></span>
+                  <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">WhatsApp Leads</span>
+                </div>
               </div>
             </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-3 pt-4 border-t border-slate-800">
+              <a href="/business/<%= business.id %>" target="_blank" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-center py-2 rounded-xl text-sm font-semibold transition">View Live</a>
+              <a href="/dashboard/edit/<%= business.id %>" class="flex-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-center py-2 rounded-xl text-sm font-semibold transition">Edit</a>
+              <form action="/dashboard/delete/<%= business.id %>" method="POST" onsubmit="return confirm('Are you sure you want to delete this business?');" class="flex-1">
+                <button type="submit" class="w-full bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/30 py-2 rounded-xl text-sm font-semibold transition">Delete</button>
+              </form>
+            </div>
           </div>
-        </div>
-      <% }) %>
-    </div>
-  <% } %>
-</main>
-<%- include('partials/footer') %>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="text-center py-20 bg-slate-900 border border-slate-800 rounded-2xl p-8">
+        <h3 class="text-lg font-semibold text-white mb-2">No businesses listed yet</h3>
+        <p class="text-slate-400 text-sm mb-6">Get started by listing your Habesha business to connect with the diaspora.</p>
+        <a href="/dashboard/create" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition shadow-lg inline-block">List Your First Business</a>
+      </div>
+    <% } %>
+  </main>
+
+  <footer class="bg-slate-900 border-t border-slate-800 text-center py-6 text-xs text-slate-500 mt-20">
+    &copy; 2026 Habeshatie Platform. Built for Habesha Entrepreneurs Worldwide.
+  </footer>
+</body>
+</html>

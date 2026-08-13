@@ -11,35 +11,43 @@ exports.postAdminLogin = (req, res) => {
   const { email, password } = req.body;
   const cleanEmail = email ? email.toLowerCase().trim() : '';
 
+  if (!cleanEmail || !password) {
+    return res.status(400).render('admin-login', { error: 'Please enter both email and password.' });
+  }
+
   db.get('SELECT * FROM users WHERE email = ? AND is_admin = 1', [cleanEmail], async (err, user) => {
     if (err || !user) {
-      return res.render('admin-login', { error: 'Invalid master credentials or unauthorized access.' });
+      return res.status(400).render('admin-login', { error: 'Invalid master credentials or unauthorized access.' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.render('admin-login', { error: 'Invalid master credentials.' });
-    }
-
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // Valid for 10 minutes
-
-    db.run('UPDATE users SET otp_code = ?, otp_expiry = ? WHERE id = ?', [otp, expiry, user.id], (err) => {
-      if (err) {
-        return res.render('admin-login', { error: 'System error generating 2FA security token.' });
+    try {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).render('admin-login', { error: 'Invalid master credentials.' });
       }
 
-      console.log('\n========================================');
-      console.log('🔒 [HABESHATIE MASTER SECURITY 2FA ALERT]');
-      console.log(`Target Admin: ${user.email}`);
-      console.log(`Generated 6-Digit OTP: ${otp}`);
-      console.log('Dispatched via: [Secure Email] & [WhatsApp API]');
-      console.log('========================================\n');
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // Valid for 10 minutes
 
-      req.session.pendingAdminId = user.id;
-      res.render('admin-verify', { error: null, email: user.email });
-    });
+      db.run('UPDATE users SET otp_code = ?, otp_expiry = ? WHERE id = ?', [otp, expiry, user.id], (updateErr) => {
+        if (updateErr) {
+          return res.status(500).render('admin-login', { error: 'System error generating 2FA security token.' });
+        }
+
+        console.log('\n========================================');
+        console.log('🔒 [HABESHATIE MASTER SECURITY 2FA ALERT]');
+        console.log(`Target Admin: ${user.email}`);
+        console.log(`Generated 6-Digit OTP: ${otp}`);
+        console.log('Dispatched via: [Secure Email] & [WhatsApp API]');
+        console.log('========================================\n');
+
+        req.session.pendingAdminId = user.id;
+        res.render('admin-verify', { error: null, email: user.email });
+      });
+    } catch (compareErr) {
+      res.status(500).render('admin-login', { error: 'Server error during authentication.' });
+    }
   });
 };
 
@@ -68,13 +76,24 @@ exports.postVerify2FA = (req, res) => {
       return res.render('admin-verify', { error: 'Invalid security code. Please check your Email/WhatsApp.', email: user.email });
     }
 
-    db.run('UPDATE users SET otp_code = NULL, otp_expiry = NULL WHERE id = ?', [user.id], () => {
-      delete req.session.pendingAdminId;
-      req.session.userId = user.id;
-      req.session.userEmail = user.email;
-      req.session.isAdmin = true;
+    db.run('UPDATE users SET otp_code = NULL, otp_expiry = NULL WHERE id = ?', [user.id], (clearErr) => {
+      if (clearErr) {
+        return res.render('admin-verify', { error: 'Database error clearing 2FA tokens.', email: user.email });
+      }
 
-      res.redirect('/admin/dashboard');
+      // Prevent session fixation by regenerating session upon successful admin verification
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
+          return res.status(500).render('admin-verify', { error: 'Session initialization error.', email: user.email });
+        }
+
+        delete req.session.pendingAdminId;
+        req.session.userId = user.id;
+        req.session.userEmail = user.email;
+        req.session.isAdmin = true;
+
+        res.redirect('/admin/dashboard');
+      });
     });
   });
 };

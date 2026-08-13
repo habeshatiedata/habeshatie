@@ -25,8 +25,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// Since app.js uses app.use('/', dashboardRoutes), we explicitly include /dashboard in the paths here:
 router.get('/dashboard', requireAuth, dashboardController.getDashboard);
 router.get('/dashboard/create', requireAuth, dashboardController.getCreateBusiness);
 router.post('/dashboard/create', requireAuth, upload.single('photo'), dashboardController.postCreateBusiness);
+router.get('/dashboard/edit/:id', requireAuth, dashboardController.getEditBusiness);
+router.post('/dashboard/edit/:id', requireAuth, upload.single('photo'), dashboardController.postEditBusiness);
+router.post('/dashboard/delete/:id', requireAuth, dashboardController.deleteBusiness);
 
 module.exports = router;

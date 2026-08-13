@@ -1,49 +1,136 @@
-<%- include('partials/header') %>
-<main class="container" style="max-width: 600px; padding-top: 2rem; padding-bottom: 3rem;">
-  <div style="background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 2rem;">
-    <h2 style="margin-bottom: 1.5rem;">List Your Business</h2>
-    <form action="/dashboard/create" method="POST" enctype="multipart/form-data">
-      <div style="margin-bottom: 1rem;">
-        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Business Name</label>
-        <input type="text" name="name" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
-      </div>
-      <div style="margin-bottom: 1rem;">
-        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Category</label>
-        <select name="category" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;">
-          <option value="Restaurant & Catering">Restaurant & Catering</option>
-          <option value="Beauty & Hair">Beauty & Hair</option>
-          <option value="Professional Services">Professional Services</option>
-          <option value="Retail & Grocery">Retail & Grocery</option>
-        </select>
-      </div>
-      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <div style="flex: 1;">
-          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">City</label>
-          <input type="text" name="city" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof business !== 'undefined' ? 'Edit Business' : 'List Your Business' %> | Habeshatie</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex justify-between items-center">
+    <a href="/" class="text-xl font-bold tracking-tight text-white">Habesha<span class="text-amber-500">tie</span></a>
+    <nav class="flex items-center gap-4 text-sm font-semibold">
+      <a href="/" class="text-slate-300 hover:text-white">Explore</a>
+      <a href="/dashboard" class="text-slate-300 hover:text-white">Dashboard</a>
+      <a href="/logout" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg">Logout</a>
+    </nav>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-6 py-10">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+      <h1 class="text-2xl font-extrabold text-white mb-6"><%= typeof business !== 'undefined' ? 'Edit Business Listing' : 'List Your Habesha Business' %></h1>
+
+      <form action="<%= typeof business !== 'undefined' ? '/dashboard/edit/' + business.id : '/dashboard/create' %>" method="POST" enctype="multipart/form-data" class="space-y-6" novalidate>
+        <!-- Business Name -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Business Name *</label>
+          <input type="text" name="name" required minlength="2" maxlength="100" value="<%= typeof business !== 'undefined' ? business.name : '' %>" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500" placeholder="e.g., Lalibela Restaurant">
         </div>
-        <div style="flex: 1;">
-          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Country</label>
-          <input type="text" name="country" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Category -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Category *</label>
+            <select name="category" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500">
+              <option value="" disabled <%= typeof business === 'undefined' ? 'selected' : '' %>>Select Category</option>
+              <% ['Restaurant & Catering', 'Café & Coffee Shop', 'Retail & Grocery', 'Fashion & Traditional Wear', 'Beauty, Hair & Spa', 'Professional Services', 'Logistics & Cargo', 'Real Estate & Housing', 'Travel & Tourism', 'Events & Music', 'Healthcare & Wellness', 'Other'].forEach(cat => { %>
+                <option value="<%= cat %>" <%= typeof business !== 'undefined' && business.category === cat ? 'selected' : '' %>><%= cat %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <!-- Country -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Country *</label>
+            <select name="country" id="countrySelect" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500" onchange="updateCountryDefaults()">
+              <option value="" disabled <%= typeof business === 'undefined' ? 'selected' : '' %>>Select Country</option>
+              <% ['United States', 'United Kingdom', 'Canada', 'Germany', 'Sweden', 'Switzerland', 'Netherlands', 'Norway', 'France', 'Italy', 'United Arab Emirates', 'Saudi Arabia', 'Israel', 'Ethiopia', 'Eritrea', 'Australia', 'Other'].forEach(c => { %>
+                <option value="<%= c %>" <%= typeof business !== 'undefined' && business.country === c ? 'selected' : '' %>><%= c %></option>
+              <% }) %>
+            </select>
+          </div>
         </div>
-      </div>
-      <div style="margin-bottom: 1rem;">
-        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">WhatsApp / Phone Number</label>
-        <input type="text" name="phone" placeholder="+49 123 45678" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
-      </div>
-      <div style="margin-bottom: 1rem;">
-        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Languages Spoken</label>
-        <input type="text" name="languages" placeholder="Amharic, English, German" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;" />
-      </div>
-      <div style="margin-bottom: 1rem;">
-        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Description</label>
-        <textarea name="description" rows="4" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;"></textarea>
-      </div>
-      <div style="margin-bottom: 1.5rem;">
-        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Cover Photo</label>
-        <input type="file" name="photo" accept="image/*" style="width: 100%;" />
-      </div>
-      <button type="submit" class="btn-cta" style="width: 100%; padding: 0.85rem; border: none; cursor: pointer;">Publish Listing</button>
-    </form>
-  </div>
-</main>
-<%- include('partials/footer') %>
+
+        <!-- City -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">City *</label>
+          <input type="text" name="city" id="cityInput" required value="<%= typeof business !== 'undefined' ? business.city : '' %>" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500" placeholder="e.g., Select a country first">
+          <p id="cityHelper" class="text-xs text-slate-500 mt-1">Enter the city where your business is located.</p>
+        </div>
+
+        <!-- Phone / WhatsApp -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">WhatsApp / Phone Number *</label>
+          <input type="text" name="phone" id="phoneInput" required value="<%= typeof business !== 'undefined' ? business.phone : '' %>" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500" placeholder="e.g., +447000000000">
+        </div>
+
+        <!-- Languages Spoken -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Languages Spoken</label>
+          <input type="text" name="languages" value="<%= typeof business !== 'undefined' ? (business.languages || '') : '' %>" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500" placeholder="e.g., Amharic, Tigrinya, English">
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Business Description *</label>
+          <textarea name="description" rows="4" required minlength="10" maxlength="1000" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500" placeholder="Describe your services, products, and specialties..."><%= typeof business !== 'undefined' ? business.description : '' %></textarea>
+        </div>
+
+        <!-- Cover Photo -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Cover Photo <%= typeof business !== 'undefined' ? '(Optional)' : '*' %></label>
+          <input type="file" name="photo" accept="image/*" <%= typeof business === 'undefined' ? 'required' : '' %> class="w-full text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer">
+          <p class="text-xs text-slate-500 mt-1"><%= typeof business !== 'undefined' ? 'Leave empty to keep your existing photo.' : 'Upload a clear photo of your storefront or products.' %></p>
+        </div>
+
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg"><%= typeof business !== 'undefined' ? 'Save Changes' : 'Publish Business Listing' %></button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const countryData = {
+      "United Kingdom": { cities: "e.g., London, Manchester, Glasgow", code: "+44" },
+      "United States": { cities: "e.g., Washington D.C., Atlanta, Seattle", code: "+1" },
+      "Canada": { cities: "e.g., Toronto, Ottawa, Calgary", code: "+1" },
+      "Germany": { cities: "e.g., Frankfurt, Berlin, Munich", code: "+49" },
+      "Sweden": { cities: "e.g., Stockholm, Gothenburg, Malmö", code: "+46" },
+      "Switzerland": { cities: "e.g., Zurich, Geneva, Bern", code: "+41" },
+      "Netherlands": { cities: "e.g., Amsterdam, Rotterdam, Utrecht", code: "+31" },
+      "Norway": { cities: "e.g., Oslo, Bergen, Trondheim", code: "+47" },
+      "France": { cities: "e.g., Paris, Lyon, Marseille", code: "+33" },
+      "Italy": { cities: "e.g., Rome, Milan, Florence", code: "+39" },
+      "United Arab Emirates": { cities: "e.g., Dubai, Abu Dhabi, Sharjah", code: "+971" },
+      "Saudi Arabia": { cities: "e.g., Riyadh, Jeddah, Dammam", code: "+966" },
+      "Israel": { cities: "e.g., Tel Aviv, Jerusalem, Haifa", code: "+972" },
+      "Ethiopia": { cities: "e.g., Addis Ababa, Dire Dawa, Bahir Dar", code: "+251" },
+      "Eritrea": { cities: "e.g., Asmara, Keren, Massawa", code: "+291" },
+      "Australia": { cities: "e.g., Melbourne, Sydney, Brisbane", code: "+61" },
+      "Other": { cities: "e.g., Enter City Name", code: "+" }
+    };
+
+    function updateCountryDefaults() {
+      const countrySelect = document.getElementById('countrySelect');
+      const cityInput = document.getElementById('cityInput');
+      const cityHelper = document.getElementById('cityHelper');
+      const phoneInput = document.getElementById('phoneInput');
+
+      const selectedCountry = countrySelect.value;
+      if (countryData[selectedCountry]) {
+        const data = countryData[selectedCountry];
+        if (!cityInput.value) {
+          cityInput.placeholder = data.cities;
+        }
+        cityHelper.innerText = `Popular hubs in ${selectedCountry}: ${data.cities.replace('e.g., ', '')}`;
+        
+        if (!phoneInput.value || phoneInput.value.length <= 4) {
+          phoneInput.value = data.code;
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', updateCountryDefaults);
+  </script>
+</body>
+</html>

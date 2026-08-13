@@ -1,52 +1,154 @@
 const db = require('../config/db');
+const { parsePhoneNumberFromString } = require('libphonenumber-js');
 
-// Render User Dashboard
+// Comprehensive ISO 3166-1 alpha-2 mapping for global Habesha diaspora hubs
+const countryToAlpha2 = {
+  // North America
+  "United States": "US",
+  "Canada": "CA",
+  
+  // Europe
+  "United Kingdom": "GB",
+  "Germany": "DE",
+  "Sweden": "SE",
+  "Switzerland": "CH",
+  "Netherlands": "NL",
+  "Norway": "NO",
+  "France": "FR",
+  "Italy": "IT",
+  
+  // Middle East & Gulf
+  "Saudi Arabia": "SA",
+  "United Arab Emirates": "AE",
+  "Israel": "IL",
+  
+  // Horn of Africa & Africa
+  "Ethiopia": "ET",
+  "Eritrea": "ER",
+  "South Africa": "ZA",
+  "Kenya": "KE",
+  "Sudan": "SD",
+  
+  // Oceania
+  "Australia": "AU"
+};
+
 exports.getDashboard = (req, res) => {
   const userId = req.session.userId;
-
-  db.all(
-    `SELECT b.*, 
-            COALESCE(a.views_count, 0) as views_count, 
-            COALESCE(a.whatsapp_clicks, 0) as whatsapp_clicks
-     FROM businesses b
-     LEFT JOIN analytics a ON b.id = a.business_id
-     WHERE b.user_id = ?
-     ORDER BY b.created_at DESC`,
-    [userId],
-    (err, businesses) => {
-      res.render('dashboard', { businesses: businesses || [] });
+  db.all('SELECT * FROM businesses WHERE user_id = ?', [userId], (err, businesses) => {
+    if (err) {
+      return res.status(500).send('Database error.');
     }
-  );
+    res.render('dashboard', { businesses });
+  });
 };
 
-// Render Create Business Page
 exports.getCreateBusiness = (req, res) => {
-  res.render('business-create', { error: null });
+  res.render('business-create', { error: null, formData: {} });
 };
 
-// Create Business Listing
 exports.postCreateBusiness = (req, res) => {
   const userId = req.session.userId;
-  const { name, category, city, country, phone, description, languages } = req.body;
-  const photo = req.file ? `/uploads/${req.file.filename}` : '/uploads/default.jpg';
+  let { name, category, country, city, phone, languages, description } = req.body;
+  const photo = req.file ? `/uploads/${req.file.filename}` : '';
 
-  const baseSlug = name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
-  const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+  const countryCode = countryToAlpha2[country];
+
+  if (!countryCode) {
+    return res.render('business-create', {
+      error: 'Please select a valid supported country.',
+      formData: { name, category, country, city, phone, languages, description }
+    });
+  }
+
+  const phoneNumber = parsePhoneNumberFromString(phone, countryCode);
+
+  if (!phoneNumber || !phoneNumber.isValid()) {
+    return res.render('business-create', {
+      error: `Invalid phone number for ${country}. Please enter a valid local or international phone format.`,
+      formData: { name, category, country, city, phone, languages, description }
+    });
+  }
+
+  const formattedPhone = phoneNumber.format('E.164');
 
   db.run(
-    `INSERT INTO businesses (user_id, name, slug, category, city, country, phone, description, photo, languages)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [userId, name, slug, category, city, country, phone, description, photo, languages],
-    function (err) {
+    `INSERT INTO businesses (user_id, name, category, country, city, phone, languages, description, photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, name, category, country, city, formattedPhone, languages, description, photo],
+    (err) => {
       if (err) {
-        return res.render('business-create', { error: 'Failed to create business listing.' });
+        return res.status(500).send('Error saving business to database.');
       }
-      
-      const businessId = this.lastID;
-      // Initialize Analytics Record
-      db.run('INSERT INTO analytics (business_id, views_count, whatsapp_clicks) VALUES (?, 0, 0)', [businessId]);
-      
       res.redirect('/dashboard');
     }
   );
+};
+
+exports.getEditBusiness = (req, res) => {
+  const businessId = req.params.id;
+  const userId = req.session.userId;
+
+  db.get('SELECT * FROM businesses WHERE id = ? AND user_id = ?', [businessId, userId], (err, business) => {
+    if (err || !business) {
+      return res.status(404).send('Business not found or unauthorized.');
+    }
+    res.render('business-create', { business, error: null });
+  });
+};
+
+exports.postEditBusiness = (req, res) => {
+  const businessId = req.params.id;
+  const userId = req.session.userId;
+  let { name, category, country, city, phone, languages, description } = req.body;
+
+  const countryCode = countryToAlpha2[country];
+
+  if (!countryCode) {
+    return res.render('business-create', {
+      error: 'Please select a valid supported country.',
+      business: { id: businessId, name, category, country, city, phone, languages, description }
+    });
+  }
+
+  const phoneNumber = parsePhoneNumberFromString(phone, countryCode);
+
+  if (!phoneNumber || !phoneNumber.isValid()) {
+    return res.render('business-create', {
+      error: `Invalid phone number for ${country}. Please enter a valid phone number.`,
+      business: { id: businessId, name, category, country, city, phone, languages, description }
+    });
+  }
+
+  const formattedPhone = phoneNumber.format('E.164');
+
+  if (req.file) {
+    const photoPath = `/uploads/${req.file.filename}`;
+    const query = `UPDATE businesses SET name = ?, category = ?, country = ?, city = ?, phone = ?, languages = ?, description = ?, photo = ? WHERE id = ? AND user_id = ?`;
+    db.run(query, [name, category, country, city, formattedPhone, languages, description, photoPath, businessId, userId], (err) => {
+      if (err) {
+        return res.status(500).send('Error updating business.');
+      }
+      res.redirect('/dashboard');
+    });
+  } else {
+    const query = `UPDATE businesses SET name = ?, category = ?, country = ?, city = ?, phone = ?, languages = ?, description = ? WHERE id = ? AND user_id = ?`;
+    db.run(query, [name, category, country, city, formattedPhone, languages, description, businessId, userId], (err) => {
+      if (err) {
+        return res.status(500).send('Error updating business.');
+      }
+      res.redirect('/dashboard');
+    });
+  }
+};
+
+exports.deleteBusiness = (req, res) => {
+  const businessId = req.params.id;
+  const userId = req.session.userId;
+
+  db.run('DELETE FROM businesses WHERE id = ? AND user_id = ?', [businessId, userId], (err) => {
+    if (err) {
+      return res.status(500).send('Error deleting business.');
+    }
+    res.redirect('/dashboard');
+  });
 };
